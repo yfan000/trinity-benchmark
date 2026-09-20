@@ -1,0 +1,52 @@
+name: "GROMACS"
+description: "Molecular dynamics simulation with Intel GPU acceleration via SYCL backend"
+category: simulation
+version: "2024.2"
+build_status: built
+
+binary: "/lus/flare/projects/datascience/hzheng/software/aurora/gromacs/bin/gmx_mpi"
+install_path: "/lus/flare/projects/datascience/hzheng/software/aurora/gromacs"
+
+modules:
+  - oneapi/release
+  - intel_compute_runtime
+  - cmake
+
+setup:
+  - "module use /soft/modulefiles"
+  - "module load oneapi/release"
+  - "module load intel_compute_runtime"
+  - "module load cmake"
+  - "unset PYTHONPATH"
+  - "export PATH=/lus/flare/projects/datascience/hzheng/software/aurora/gromacs/bin:$PATH"
+
+gpu_support: true
+gpu_notes: "Intel Data Center GPU Max Series via GROMACS SYCL backend (-DGMX_GPU=SYCL -DGMX_SYCL_HIPSYCL=OFF)"
+
+run_command: |
+  mpiexec -n 6 --ppn 6 gmx_mpi mdrun -ntmpi 1 -ntomp 4 -gpu_id 0 -v -deffnm output
+
+defaults:
+  nodes: 1
+  walltime: 1800
+  queue: "debug"
+  ppn: 6
+
+scaling_notes: "6 Intel GPU tiles per node. GROMACS SYCL backend natively supports Intel GPUs."
+
+keywords: ["molecular dynamics", "biomolecular simulation", "GROMACS", "protein", "lipid"]
+aliases: ["gromacs", "gmx", "gmx_mpi"]
+
+input_detection:
+  extensions: [".mdp", ".tpr", ".gro", ".top"]
+  content_markers: ["integrator", "nsteps", "cutoff-scheme"]
+
+required_inputs: [".tpr"]
+optional_inputs: [".mdp", ".gro", ".top", ".ndx"]
+output_patterns: ["*.edr", "*.trr", "*.xtc", "*.log"]
+
+notes: |
+  Built with Intel oneAPI icpx + MPICH wrappers + oneMKL FFT on Aurora.
+  -DGMX_GPU=SYCL -DGMX_SYCL_HIPSYCL=OFF -DGMX_FFT_LIBRARY=mkl
+  GROMACS 2024+ has native SYCL support for Intel GPUs via oneAPI.
+  Build script: jobs/aurora/build_gromacs/run.sh

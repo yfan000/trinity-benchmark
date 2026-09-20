@@ -1,0 +1,105 @@
+# Batch job creation on a Slurm system — Perlmutter and Frontier.
+#
+# WHY THIS FILE EXISTS. Every rule in _common.yaml carries `applies_if: {scheduler: "PBS Pro"}`,
+# so on a Slurm system eight of the twelve returned not_applicable and a Slurm answer was
+# checked against three requirements while a PBS answer faced eleven. Measured on the v6
+# corpus: 11.0 checks decided per PBS answer, 3.0 per Slurm answer. A Slurm script could omit
+# its walltime, its account and its QOS and still pass.
+#
+# EVIDENCE WARNING, and it is not a small one. The run archive is Polaris/PBS only — there is
+# no Slurm script anywhere in it. Every PBS rule is backed by "run:138/138"; every rule below
+# is derived from facility documentation and the catalog, with NOTHING executed behind it.
+# Treat these the way `source: model` items are treated: a strong prior, not a fact. The one
+# documentation-derived PBS rule we could check against real runs — `cd $PBS_O_WORKDIR` —
+# turned out to be contradicted by 135 of 138 scripts, so this is a live risk, not a
+# hypothetical one.
+#
+# Consequences: these rules are one severity step softer than their PBS counterparts where the
+# PBS one is fatal, and judge_calibrate gives them no positive controls. Promote them once a
+# Slurm run exists to check them against.
+
+requirements:
+
+  - id: BATCH.slurm.walltime_declared
+    claim: "Requests a walltime with `#SBATCH --time=` or `-t`"
+    decided_by: deterministic
+    check: {kind: regex, pattern: '(?m)^\s*#SBATCH\s+(--time[= ]|-t\s)'}
+    applies_if: {scheduler: "Slurm"}
+    dimension: completeness
+    severity: fatal
+    source: "catalog:systems/<system>.yaml#scheduler + docs"
+    rationale: "the one Slurm rule safe to call fatal — a job without a walltime does not run"
+
+  - id: BATCH.slurm.account_declared
+    claim: "Charges a project with `#SBATCH -A` or `--account=`"
+    decided_by: deterministic
+    check: {kind: regex, pattern: '(?m)^\s*#SBATCH\s+(-A\s|--account[= ])'}
+    applies_if: {scheduler: "Slurm"}
+    dimension: completeness
+    severity: major
+    source: "docs:NERSC/OLCF"
+    rationale: >-
+      On Perlmutter a GPU allocation takes the `_g` suffix (`-A m4553_g`). That refinement is
+      deliberately NOT checked: it is documentation-derived, unverified by any run, and the
+      kind of detail that turned out to be wrong on the PBS side.
+
+  - id: BATCH.slurm.queue_or_qos_declared
+    claim: "Selects a queue — `#SBATCH -q`/`--qos=` on Perlmutter, `-p`/`--partition=` on
+            Frontier"
+    decided_by: deterministic
+    check: {kind: regex, pattern: '(?m)^\s*#SBATCH\s+(-q\s|--qos[= ]|-p\s|--partition[= ])'}
+    applies_if: {scheduler: "Slurm"}
+    dimension: completeness
+    severity: major
+    source: "docs:NERSC/OLCF"
+    rationale: >-
+      Accepts BOTH forms on purpose. NERSC documents QOS and OLCF documents partitions, and
+      with no run to settle which a given site actually requires, rejecting either would be
+      guessing. Narrow this when a Slurm run exists.
+
+  - id: BATCH.slurm.nodes_declared
+    claim: "States the node count with `#SBATCH -N` or `--nodes=`"
+    decided_by: deterministic
+    check: {kind: regex, pattern: '(?m)^\s*#SBATCH\s+(-N\s|--nodes[= ])'}
+    applies_if: {scheduler: "Slurm"}
+    dimension: completeness
+    severity: major
+    source: "docs:NERSC/OLCF"
+
+  - id: BATCH.slurm.no_directive_comments
+    claim: "No trailing comment on a #SBATCH line"
+    decided_by: deterministic
+    check: {kind: regex_absent, pattern: '(?m)^\s*#SBATCH\s+[^\n#]*#'}
+    applies_if: {scheduler: "Slurm"}
+    dimension: usability
+    severity: minor
+    source: "format:Slurm"
+    rationale: >-
+      Minor, not major as on the PBS side. Slurm's parser is more forgiving than PBS's, and
+      with no run to confirm the failure mode this does not warrant a harder penalty.
+
+  - id: BATCH.slurm.srun_launcher
+    claim: "Launches with `srun`, not `mpiexec` or `mpirun`"
+    decided_by: deterministic
+    check: {kind: regex, pattern: '(?m)^\s*srun\b'}
+    applies_if: {scheduler: "Slurm"}
+    dimension: correctness
+    severity: major
+    source: "docs:NERSC/OLCF"
+    rationale: >-
+      Both NERSC and OLCF document srun as the launcher. `mpiexec` sometimes works through a
+      compatibility layer, which is why this is major rather than fatal.
+
+free_choice:
+
+  - axis: "Slurm flag style"
+    note: >-
+      Short and long forms are equivalent — `-N 4` and `--nodes=4`, `-t` and `--time=`,
+      `-A` and `--account=`. Never deduct for either.
+    source: "format:Slurm"
+
+  - axis: "GPU request form"
+    note: >-
+      `--gpus-per-node`, `--gres=gpu:N` and `-C gpu` all appear in facility documentation for
+      GPU jobs. Accept any of them; requiring one specific form would be a guess.
+    source: "docs:NERSC — and no run exists to settle it"

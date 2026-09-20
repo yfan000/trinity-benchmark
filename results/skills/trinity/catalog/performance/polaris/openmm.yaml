@@ -1,0 +1,17 @@
+app: openmm
+system: polaris
+version: "8.5.1 (pip venv, OpenCL platform)"
+benchmark:
+  name: "LJ fluid 125k Ar atoms, 1000 MD steps, OpenCL/A100"
+  nodes: 1
+  gpus_per_node: 1
+  mpi_ranks: 1
+  walltime_s: 3
+  throughput: 30.70
+  throughput_unit: "ns/day"
+  date: "2026-05-11"
+  job_script: "jobs/polaris/smoke_tests_genesis/openmm/run_v3.sh"
+notes: |
+  pip venv has Reference/CPU/OpenCL platforms — NO CUDA plugin.
+  Use platform='OpenCL', OpenCLDeviceIndex='0', Precision='mixed'.
+  30.70 ns/day on A100 via OpenCL (not native CUDA throughput).

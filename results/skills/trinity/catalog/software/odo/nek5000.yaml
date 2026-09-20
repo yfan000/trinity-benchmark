@@ -1,0 +1,54 @@
+name: "Nek5000"
+description: "Spectral-element CFD solver — core tools build on Odo (AMD MI250X)"
+category: simulation
+version: "git-main"
+build_status: installed
+
+binary: "/gpfs/wolf2/olcf/csc708/world-shared/hzheng/software/nek5000/bin/genmap"
+install_path: "/gpfs/wolf2/olcf/csc708/world-shared/hzheng/software/nek5000"
+
+modules:
+  - PrgEnv-amd
+
+setup:
+  - "module load PrgEnv-amd"
+  - "export NEK_SOURCE_ROOT=/gpfs/wolf2/olcf/csc708/world-shared/hzheng/software/nek5000"
+  - "export PATH=${NEK_SOURCE_ROOT}/bin:$PATH"
+
+gpu_support: false
+gpu_notes: "CPU-only tools build. Nek5000 solver itself is CPU/MPI."
+
+tools_built:
+  - genmap
+  - genbox
+  - n2to3
+  - reatore2
+  - nekmerge
+
+run_command: |
+  # Generate mesh partition
+  echo "<casename>\n<partition_target>" | genmap
+  # Compile a case
+  makenek <casename>
+  # Run (MPI)
+  srun -N 1 --ntasks-per-node 8 ./nek5000
+
+keywords: ["CFD", "spectral element", "fluid dynamics", "Nek5000", "HPC simulation"]
+aliases: ["nek5000", "nek", "genmap", "makenek"]
+
+defaults:
+  nodes: 1
+  walltime: 3600
+  queue: "batch"
+  account: "csc708"
+  ppn: 8
+
+build_notes: |
+  Built 2026-05-11 via ClearML odo-services (v6, 18s).
+  Adapted from working Frontier recipe (PrgEnv-amd, ftn/cc Cray wrappers).
+  Key fixes vs prior attempts:
+    - PrgEnv-amd not PrgEnv-gnu (provides ftn wrapper)
+    - exec bash -l restart for Lmod init in ClearML agent shell
+    - ./maketools (not make) — git-main has no root Makefile in tools/
+  CRAY_CPU_TARGET warning (x86-64 fallback) is harmless for this build.
+  build_script: jobs/odo/build_nek5000/run.sh

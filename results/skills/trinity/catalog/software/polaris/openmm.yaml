@@ -1,0 +1,56 @@
+name: "OpenMM"
+description: "High-performance molecular dynamics simulation toolkit with GPU acceleration"
+category: simulation
+version: "8.1.0"
+
+binary: "/eagle/datascience/hzheng/software/polaris/openmm_venv_v1/bin/python"
+install_path: "/eagle/datascience/hzheng/software/polaris/openmm_venv_v1"
+
+modules: []
+
+setup:
+  - "module load conda"
+  - "conda activate /eagle/datascience/hzheng/software/polaris/openmm/omm-env"
+
+gpu_support: true
+gpu_notes: "CUDA platform for A100 GPU acceleration. Supports mixed-precision (mixed) and double-precision (double) modes. Single-GPU per simulation (OpenMM uses one GPU per process)."
+
+run_command: |
+  python simulation.py
+
+input_files: [".py", ".xml", ".pdb", ".psf", ".top", ".gro"]
+
+# --- Auto-detection ---
+keywords: ["openmm", "molecular dynamics", "MD", "biomolecular simulation", "protein simulation", "CUDA MD", "force field", "AMBER", "CHARMM", "GROMACS input", "OpenMM", "alchemical", "free energy"]
+aliases: ["openmm", "omm", "openMM"]
+
+input_detection:
+  extensions: [".py", ".xml", ".pdb", ".psf"]
+  filenames: ["simulation.py", "minimize.py", "run_md.py"]
+  content_markers: ["import openmm", "from openmm", "Simulation", "Platform.getPlatformByName", "ForceField", "CUDA"]
+
+# --- Smart defaults ---
+defaults:
+  nodes: 1
+  walltime: 1800
+  queue: "debug"
+  ppn: 1
+
+scaling_notes: "OpenMM runs one simulation per GPU. For ensemble simulations run 4 independent processes (one per A100). Use platform='CUDA' and set deviceIndex for GPU selection. Mixed precision (mm.Platform 'mixed') gives best speed on A100."
+
+# --- Input validation ---
+required_inputs: [".py"]
+optional_inputs: [".pdb", ".psf", ".xml", ".top", ".gro"]
+
+# --- Output retrieval ---
+output_patterns: ["*.dcd", "*.nc", "*.pdb", "*.xml", "*.log", "*.csv"]
+
+smoke_notes: |
+  Smoke tested 2026-05-11: 30.70 ns/day (OpenCL, 125k LJ atoms, A100).
+  openmm_venv_v1 is pip-installed — has Reference/CPU/OpenCL but NO CUDA plugin.
+  Use platform='OpenCL' with {'OpenCLDeviceIndex': '0', 'Precision': 'mixed'} for GPU.
+  The /openmm/omm-env conda path in setup does not exist on Polaris.
+
+notes: "Use openmm_venv_v1 with OpenCL platform. CUDA plugin not available in pip venv."
+
+build_status: built

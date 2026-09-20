@@ -1,0 +1,88 @@
+# ALCF Sunspot — 128-node Intel GPU testbed for Aurora at Argonne National Laboratory
+
+name: "Sunspot"
+facility: "ALCF"
+description: "128-node Intel Data Center GPU Max Series testbed for Aurora at Argonne National Laboratory"
+
+software_build_dir: "/lus/tegu/projects/datascience/hzheng/software/sunspot"
+
+backend: "alcf_clearml"
+
+compute:
+  resource_id: ""                 # Sunspot is not in the IRI API; use ClearML for job submission
+  api_base_url: "https://api.alcf.anl.gov/api/v1"
+
+storage:
+  home:
+    resource_id: ""               # No IRI storage resource; use Globus for file transfers
+    mount_path: "/home"
+    remote_base_path: "/home/hzheng"
+  tegu:
+    resource_id: ""
+    mount_path: "/lus/tegu"
+    remote_base_path: ""
+
+globus:
+  home:
+    endpoint_id: "103c946c-3790-11f1-b05d-0afffe4617ab"
+    path_prefix: ""
+  compute_endpoint_id:
+    login: "7be05bad-3cb5-4e77-a8f3-a9e237dbfb55"    # sunspot-login; Running 2026-05-09
+    compute: "189ce74b-1f6a-45c7-a8d0-9a3cda316a29"  # sunspot-compute; Running 2026-05-09
+
+clearml:
+  queues:
+    sunspot: "6023ed8e01e048838efd6a31a894e0a4"
+    sunspot-login: "a73f8491e4ce4116a7d1df990cb69bdc"
+    sunspot-services: "2389b916f27f46679dda112822aadf79"
+    sunspot-services-executor: "903aea6dc3b74c17b3e9393fc1443277"
+    sunspot-persistent-compute: "9c397aeeb35543c9a166e0304ba58220"
+
+scheduler:
+  # Source: ALCF Sunspot docs are sparse; values based on operational experience (2026-05-09)
+  # Sunspot is an Aurora test bed — not covered by main ALCF docs. Queue policy may change.
+  queues:
+    workq:
+      min_nodes: 1
+      max_nodes: 128
+      min_walltime: 300
+      max_walltime: 86400    # 24 hours; can have multi-hour scheduling delays
+      notes: "Primary user queue. Use account=datascience (not Aurora_deployment)."
+    zero:
+      min_nodes: 1
+      max_nodes: 128
+      min_walltime: 300
+      max_walltime: 86400
+      notes: "Purpose unclear from docs; behavior similar to workq."
+    backfill:
+      min_nodes: 1
+      max_nodes: 128
+      min_walltime: 300
+      max_walltime: 86400
+      notes: "Backfill queue; lower priority than workq."
+    next-eval:
+      min_nodes: 1
+      max_nodes: 128         # ~2600 Aurora nodes allocated here during Aurora image testing
+      min_walltime: 300
+      max_walltime: 86400
+      notes: "Used for compute image evaluation. Available node count varies during Aurora image testing."
+
+hardware:
+  nodes: 128
+  gpus_per_node: 6
+  gpu_type: "Intel Data Center GPU Max 1550"
+  tiles_per_gpu: 2
+  xpu_devices_per_node: 12          # PyTorch sees 12 tiles (6 GPUs x 2 tiles)
+  cpus_per_node: 208                # 2 sockets x 52 cores x 2 threads
+  cpu_type: "Intel Xeon CPU Max 9470C (Sapphire Rapids HBM)"
+  memory_per_node_gb: 1126          # ~1.1 TiB (HBM + DDR)
+
+job_defaults:
+  shell: "#!/bin/bash -l"
+  nodes: 1
+  walltime: 600
+  queue: "workq"
+  account: "datascience"
+  ppn: 6
+  custom_attributes:
+    filesystems: "home:tegu"

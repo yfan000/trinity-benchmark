@@ -1,0 +1,185 @@
+# Mandatory sections per input format — the curated replacement for input_detection.content_markers.
+#
+# WHY THIS FILE EXISTS. `input_detection.content_markers` answers "does this file LOOK LIKE an
+# NWChem deck?" — any-of semantics, for classifying a file you found. `INP.common.
+# content_markers_present` applied it as all-of completeness and became the single largest
+# violation source in Input preparation (19 of 38 rows), wrong in nearly every instance:
+#
+#   missing: echo, memory stack              NWChem  — both optional directives
+#   missing: ACDEFGHIKLMNPQRSTVWY            AlphaFold — the amino-acid ALPHABET, which no real
+#                                            FASTA contains; it holds an actual sequence
+#   missing: [MESH], [VELOCITY], [PRESSURE]  nekRS   — optional sections
+#   missing: dump                            LAMMPS  — optional output
+#   missing: vdwtype                         GROMACS — defaults to cut-off
+#
+# Supplying those markers to the model as a contract would be worse than withholding them: it
+# would instruct models to write the alphabet into a FASTA and `memory stack` into every deck,
+# so the check would start passing while the decks got worse.
+#
+# THE RULE FOR THIS FILE. `mandatory` lists only what the application REFUSES TO RUN without.
+# Anything conditional, defaulted, or merely conventional goes in `expected` (reported, never
+# required) or is omitted. When in doubt, leave it out — an over-broad mandatory list is the
+# exact defect this file replaces.
+#
+# STATUS: the mandatory lists below are format knowledge, not measured from runs. Each carries
+# a `source`. They are deliberately introduced at severity `major`, never `fatal`, until either
+# a real run or a domain reviewer confirms them. Needs sign-off from someone who writes these
+# decks for a living.
+
+contracts:
+
+  nwchem:
+    file: ".nw"
+    mandatory: ["geometry", "task"]
+    expected:  ["start", "basis"]
+    note: >-
+      `task` names the operation to run and `geometry` the system; without either, nwchem exits
+      immediately. `basis` is required for every electronic-structure task but not for e.g. an
+      MD task, so it is expected rather than mandatory. `echo` and `memory stack` are pure
+      conveniences and were the two markers that failed correct decks.
+    source: "format:NWChem user manual — input file structure"
+
+  lammps:
+    file: ".in"
+    alternatives: true        # .lammps / .in / .lmp are three names for ONE script
+    naming: "The filename is yours; `lmp -in <file>` reads whatever you pass it. Both
+      `in.<case>` (as in the worked example) and `<case>.in` are common."
+    mandatory: ["units", "atom_style", "run"]
+    expected:  ["pair_style"]
+    note: >-
+      `units` and `atom_style` must precede any box or particle definition and LAMMPS errors if
+      a later command needs them; `run` is what makes the script do anything. `pair_style` is
+      expected but genuinely absent for rigid-body or purely bonded models. `fix` and `dump`
+      are optional and were flagged on correct decks.
+    source: "format:LAMMPS manual — commands must appear before use"
+
+  nekrs:
+    file: ".par"
+    binary: [".re2"]          # the mesh is a compiled binary, produced by the meshing tools
+    mandatory: ["[GENERAL]"]
+    expected:  ["[MESH]", "[PRESSURE]", "[VELOCITY]"]
+    note: >-
+      Only [GENERAL] is unconditional — it carries dt, numSteps and polynomialOrder. [VELOCITY]
+      and [PRESSURE] are solver blocks that a case may legitimately omit or inherit, and [MESH]
+      is optional when the mesh comes from the .re2. All three were flagged on correct decks.
+    source: "format:nekRS .par is INI-style; [GENERAL] is the only required section"
+
+  qe:
+    file: ".in"
+    alternatives: true        # .scf.in / .relax.in / .bands.in / .pw.in name ONE deck
+    naming: "The filename is yours; `pw.x -in <file>` reads whatever you pass it, and the
+      calculation type conventionally appears in the name (scf.in, relax.in)."
+    mandatory: ["&CONTROL", "&SYSTEM", "&ELECTRONS", "ATOMIC_SPECIES", "ATOMIC_POSITIONS",
+                "K_POINTS"]
+    expected:  []
+    note: >-
+      pw.x genuinely requires all three namelists and all three cards for an scf run. This is
+      the one catalog marker list that was close to correct, and the rubric already encodes it
+      as INP.qe.required_namelists / required_cards with its own inline values.
+    source: "format:Quantum ESPRESSO PW input description (INPUT_PW.html)"
+
+  qmcpack:
+    file: ".xml"
+    binary: [".h5"]           # the wavefunction is HDF5, produced by a converter
+    mandatory: ["qmcsystem", "wavefunction", "hamiltonian"]
+    expected:  ["simulationcell", "project"]
+    note: >-
+      Written without angle brackets on purpose — the catalog spells these '<qmcsystem' on
+      polaris/perlmutter and 'qmcsystem' on aurora, and a contract that demanded one spelling
+      would fail valid XML written in the other. `simulationcell` is required only for a
+      periodic system.
+    source: "format:QMCPACK input — qmcsystem/wavefunction/hamiltonian are the three required blocks"
+
+  gromacs:
+    file: ".mdp"
+    binary: [".tpr"]          # grompp compiles it from .mdp + .gro + .top
+    sources: [".mdp", ".gro", ".top"]   # ...so THESE are what a human actually writes. Without
+                              # this the inventory said "required: .tpr" and listed the real
+                              # deliverables as "optional", next to a worked example that was an
+                              # .mdp — three signals pointing three ways.
+    fixed_filenames: false     # every GROMACS filename is a CLI argument: `gmx grompp -c
+                               # lysozyme.gro -f md.mdp -p topol.top` is ordinary practice, so
+                               # the catalog's conf.gro/md.mdp/topol.top are conventions, not
+                               # requirements. Flagging them failed a correct answer.
+    mandatory: ["integrator", "nsteps"]
+    expected:  ["coulombtype", "cutoff-scheme"]
+    note: >-
+      grompp supplies a documented default for every other .mdp option, including coulombtype
+      and vdwtype — which is why demanding `vdwtype` failed correct files. integrator and
+      nsteps have no useful default for a production run.
+    source: "format:GROMACS mdp-options — all keys have defaults except the run definition"
+
+  hpl:
+    file: "HPL.dat"
+    fixed_filenames: true      # xhpl opens HPL.dat by that exact name and no other
+    mandatory: ["HPLinpack", "Ns", "NBs", "Ps", "Qs"]
+    expected:  []
+    note: >-
+      HPL.dat is strictly positional: line 1 is a title, line 2 the output file name, line 3 the
+      output device, then paired count/value lines. The tokens listed are the labels that must
+      appear; the rubric's INP.hpl.header_and_output_lines checks the structural part.
+    source: "format:HPL tuning guide — HPL.dat is line-ordered, not keyword-value"
+
+  alphafold:
+    file: ".fasta"
+    alternatives: true        # .fasta / .fa are two names for one file
+    mandatory: [">"]
+    expected:  []
+    note: >-
+      A FASTA record is a '>' header line followed by sequence. That is the entire format. The
+      catalog's second marker, the literal string ACDEFGHIKLMNPQRSTVWY, is a detection heuristic
+      meaning "the residues come from this alphabet" — requiring it verbatim fails every real
+      FASTA, and it did.
+    source: "format:FASTA — header line then residues"
+
+  cp2k:
+    file: ".inp"
+    alternatives: true
+    mandatory: ["&GLOBAL", "&FORCE_EVAL"]
+    expected:  ["&DFT", "&SUBSYS"]
+    note: "&DFT is absent for classical force-field runs; &SUBSYS may come from a coordinate file."
+    source: "format:CP2K input reference — GLOBAL and FORCE_EVAL are the required top sections"
+
+  namd:
+    file: ".namd"
+    alternatives: true
+    mandatory: ["coordinates", "structure", "parameters"]
+    expected:  ["outputName"]
+    note: "NAMD exits without all three file references."
+    source: "format:NAMD user guide — required configuration parameters"
+
+  vasp:
+    file: "INCAR"
+    fixed_filenames: true      # VASP opens INCAR/POSCAR/POTCAR/KPOINTS by name
+    mandatory: []
+    expected:  ["ENCUT", "ISMEAR", "EDIFF", "IBRION"]
+    note: >-
+      Every INCAR tag has a default; VASP runs on an empty INCAR. The requirement here is the
+      FILE SET (INCAR, POSCAR, POTCAR, KPOINTS), which comes from input_detection.filenames, not
+      from any tag being present.
+    source: "format:VASP wiki — all INCAR tags default"
+
+  wrf:
+    file: "namelist.input"
+    fixed_filenames: true
+    mandatory: ["&time_control", "&domains"]
+    expected: ["&physics", "&dynamics"]
+    note: "WRF reads namelist.input from the run directory by that name."
+    source: "format:WRF namelist"
+
+  openfoam:
+    file: "controlDict"
+    fixed_filenames: true
+    mandatory: ["FoamFile", "application"]
+    expected: ["startFrom", "deltaT", "endTime"]
+    note: "OpenFOAM reads fixed paths under system/ and constant/."
+    source: "format:OpenFOAM case structure"
+
+# Applications with no contract on file. Listed explicitly so the absence is a recorded decision
+# rather than a lookup miss — the prompt emits an explicit "none recorded" marker for these, which
+# keeps the prompt SHAPE constant across anchors so the A/B varies only the contract's content.
+no_contract:
+  - vllm      # the deliverable is a serving config or a client script; no fixed input format
+  - pytorch   # the deliverable is a training script
+  - deepspeed
+  - tensorflow

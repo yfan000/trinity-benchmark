@@ -1,0 +1,190 @@
+name: "vLLM (ROCm)"
+description: "vLLM ROCm inference on Frontier AMD MI250X. Validated 2026-05-11: 271.5 tok/s (c=16) with 8 MI250X GCDs, TP=8. Build from source required. Use g1 partition for faster scheduling."
+category: ml-framework
+version: "0.9.2rc2.dev1802+rocm (working)"
+
+binary: "/lustre/orion/csc708/scratch/hzheng/vllm-rocm-env/bin/python"
+install_path: "/lustre/orion/csc708/scratch/hzheng/vllm-rocm-env"
+build_status: built
+
+modules:
+  - PrgEnv-amd
+  - rocm
+  - miniforge3
+
+# ── MANDATORY ENV VARS ─────────────────────────────────────────────────────
+
+setup:
+  - "#!/bin/bash -l  # REQUIRED — module command unavailable without login shell"
+  - "module load PrgEnv-amd rocm miniforge3"
+  - "unset PYTHONPATH PYTHONHOME   # AFTER module load"
+  - "export PYTHONPATH=$ROCM_PATH/share/amd_smi:$PYTHONPATH"
+  - "export HIP_VISIBLE_DEVICES=0,1,2,3,4,5,6,7"
+  - "export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7"
+  - "unset ROCR_VISIBLE_DEVICES"
+  - "unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY  # for internal node comms"
+  - "export VLLM_TARGET_DEVICE=rocm"
+  - "export PYTORCH_ROCM_ARCH=gfx90a"
+  - "export TORCHDYNAMO_DISABLE=1"
+  - "export TORCH_COMPILE_DISABLE=1"
+  - "source /lustre/orion/csc708/scratch/hzheng/vllm-rocm-env/bin/activate"
+
+gpu_notes: |
+  AMD MI250X via ROCm 6.2.4. Each node has 4x MI250X = 8 GCD devices.
+  torch.hip = 6.1.40091 (torch+rocm6.1 against ROCm 6.2.4 runtime — compatible).
+
+  VALIDATED 2026-05-11 (Slurm job 4567519, node frontier10177/10178):
+  - vLLM 0.9.2rc2.dev1802, TP=8, enforce_eager=True, g1 partition
+  - LLaMA-3.1-8B: 38.9 tok/s (c=1), 102.5 tok/s (c=4), 271.5 tok/s (c=16)
+  - Server startup: 165s (RCCL init + model load across 8 GCDs)
+  - Zero errors, ROCmFlashAttention backend
+
+# ── CRITICAL: if __name__ == '__main__' GUARD ──────────────────────────────
+
+mainguard_note: |
+  REQUIRED: All Python scripts calling vllm.LLM() MUST use:
+    if __name__ == '__main__':
+        llm = LLM(...)
+
+  Without this, vLLM's multiprocessing.spawn start method re-executes the
+  script's top-level code in worker processes, causing:
+    RuntimeError: An attempt has been made to start a new process before
+    the current process has finished its bootstrapping phase.
+
+  Also: script MUST be a .py file (not python - <<'EOF' stdin). Worker
+  processes cannot re-read from stdin.
+
+# ── RUN COMMAND ────────────────────────────────────────────────────────────
+
+run_command: |
+  # Write to bench.py then: python bench.py
+  if __name__ == '__main__':
+      from vllm import LLM, SamplingParams
+      llm = LLM(
+          model="/lustre/orion/csc708/scratch/hzheng/models/llama-3.1-8b",
+          dtype="bfloat16",
+          tensor_parallel_size=8,   # all 8 GCDs on one node
+          enforce_eager=True,
+          gpu_memory_utilization=0.85,
+      )
+      outputs = llm.generate(["Hello, HPC!"], SamplingParams(max_tokens=64))
+      print(outputs[0].outputs[0].text)
+
+# ── SLURM TEMPLATE (validated) ─────────────────────────────────────────────
+
+sbatch_template: |
+  #!/bin/bash -l
+  #SBATCH -A CSC708
+  #SBATCH -p g1          # g1 has shorter wait than batch
+  #SBATCH -N 1
+  #SBATCH --gpus-per-node=8
+  #SBATCH -t 00:30:00
+  #SBATCH -o /lustre/orion/csc708/scratch/hzheng/jobs/frontier/run_%j.log
+
+  module load PrgEnv-amd rocm miniforge3
+  unset PYTHONPATH PYTHONHOME
+  export PYTHONPATH=$ROCM_PATH/share/amd_smi:$PYTHONPATH
+  export HIP_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
+  export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
+  unset ROCR_VISIBLE_DEVICES
+  unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY
+  export VLLM_TARGET_DEVICE=rocm
+  export TORCHDYNAMO_DISABLE=1
+  export TORCH_COMPILE_DISABLE=1
+
+  /lustre/orion/csc708/scratch/hzheng/vllm-rocm-env/bin/python /path/to/bench.py
+
+# ── CLEARML SUBMISSION ─────────────────────────────────────────────────────
+
+clearml_queue: "frontier-services"  # login node; submits Slurm to compute
+clearml_note: |
+  frontier-services runs on login04. Submit a script that:
+  1. Writes bench.py to Lustre (with `if __name__ == '__main__':` guard)
+  2. Writes a Slurm batch script pointing to bench.py
+  3. Calls sbatch and monitors the job
+
+  See jobs/frontier/inference_test/ for working examples.
+
+# ── PACKAGE COMPATIBILITY ──────────────────────────────────────────────────
+
+package_pins: |
+  huggingface-hub<1.0   # hub>=1.0 removed is_offline_mode used by transformers
+  # pip install "huggingface-hub<1.0" in the vllm-rocm-env
+
+# ── BUILD RECIPE ───────────────────────────────────────────────────────────
+
+build_notes: |
+  Venv: /lustre/orion/csc708/scratch/hzheng/vllm-rocm-env
+  vllm_src: /lustre/orion/csc708/scratch/hzheng/vllm_rocm_src (github.com/vllm-project/vllm main)
+  Python 3.10.x (miniforge3). ROCm torch 2.6.0+rocm6.1. ROCm 6.2.4 runtime.
+
+  Build command (login node, ClearML frontier-services, ~45-90 min):
+    export http_proxy=http://proxy.ccs.ornl.gov:3128
+    module load PrgEnv-amd rocm miniforge3
+    unset PYTHONPATH PYTHONHOME
+    source $VENV/bin/activate
+    export PYTORCH_ROCM_ARCH=gfx90a
+    export VLLM_TARGET_DEVICE=rocm
+    export SETUPTOOLS_SCM_PRETEND_VERSION=0.9.2
+    # Patch pyproject.toml before building:
+    cd vllm_rocm_src
+    sed -i 's/^license = .*/license = {text = "Apache-2.0"}/' pyproject.toml
+    sed -i '/^license-files/d' pyproject.toml
+    pip install -r requirements/rocm.txt
+    MAX_JOBS=32 python setup.py develop
+
+# ── FAILURE LOG ────────────────────────────────────────────────────────────
+
+failure_log:
+  - error: "RuntimeError: An attempt has been made to start a new process before bootstrapping"
+    cause: "LLM() at top level; spawn re-runs the script on worker start"
+    fix: "Wrap all LLM code in `if __name__ == '__main__':`"
+
+  - error: "FileNotFoundError: code/<stdin>"
+    cause: "Script passed via stdin; worker can't re-read it"
+    fix: "Write to a .py file and run `python /path/to/file.py`"
+
+  - error: "ImportError: cannot import name 'is_offline_mode' from 'huggingface_hub'"
+    cause: "huggingface_hub>=1.0 removed is_offline_mode"
+    fix: "pip install 'huggingface-hub<1.0'"
+
+  - error: "ValueError: invalid pyproject.toml config: project.license"
+    cause: "setuptools >=77 enforces PEP 639; vllm uses old string license format"
+    fix: "Patch: `license = {text = 'Apache-2.0'}` and remove `license-files` line"
+
+  - error: "from triton.backends.compiler import AttrsDescriptor ImportError"
+    cause: "triton version mismatch with torch (system miniforge vs venv)"
+    fix: "pip install triton==3.2.0 in vllm-rocm-env"
+
+  - error: "Slurm job PENDING >2h on batch partition"
+    cause: "Frontier batch heavily loaded; g1 partition has shorter queue"
+    fix: "Use #SBATCH -p g1 instead of -p batch"
+
+# ── BENCHMARK RESULTS ──────────────────────────────────────────────────────
+
+benchmark:
+  date: "2026-05-11"
+  model: "LLaMA-3.1-8B Instruct"
+  hardware: "8x AMD MI250X (1 node, gfx90a), Frontier compute"
+  slurm_job: "4567519"
+  vllm_version: "0.9.2rc2.dev1802"
+  tp_size: 8
+  backend: "ROCm (enforce_eager)"
+  results:
+    concurrency_1:  {throughput_tps: 38.9,  latency_avg_s: 3.294}
+    concurrency_4:  {throughput_tps: 102.5, latency_avg_s: 4.987}
+    concurrency_16: {throughput_tps: 271.5, latency_avg_s: 7.533}
+
+keywords: ["vLLM", "ROCm", "AMD GPU", "MI250X", "LLM inference", "gfx90a", "Frontier"]
+aliases: ["vllm", "llm-serving", "rocm-vllm"]
+
+defaults:
+  nodes: 1
+  walltime: 1800
+  partition: "g1"
+  account: "CSC708"
+
+references:
+  - "knowledgebase/hpc/lessons/amd_rocm_model_serving.md"
+  - "jobs/frontier/inference_test/bench.py"
+  - "jobs/frontier/inference_test/run.sh"

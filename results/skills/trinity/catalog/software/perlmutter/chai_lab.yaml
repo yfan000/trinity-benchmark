@@ -1,0 +1,59 @@
+name: "chai-lab"
+description: "Chai-1 protein structure prediction model (CUDA build for Perlmutter A100)"
+category: ml-framework
+version: "0.6.1"
+
+binary: "python"
+install_path: "/pscratch/sd/h/hzheng/software/chai_lab/venv"
+
+modules:
+  - "python"
+  - "pytorch"
+
+setup:
+  - "module reset"
+  - "module load python"
+  - "module load pytorch"
+  - "source /pscratch/sd/h/hzheng/software/chai_lab/venv/bin/activate"
+
+gpu_support: true
+gpu_notes: "NVIDIA A100-SXM4-40GB via CUDA. device='cuda' (default)."
+
+run_command: |
+  python -c "
+  from chai_lab.chai1 import run_inference
+  import pathlib
+  candidates = run_inference(
+      fasta_file=pathlib.Path('input.fasta'),
+      output_dir=pathlib.Path('output'),
+      num_trunk_recycles=3,
+      num_diffn_timesteps=200,
+      seed=42,
+      device='cuda',
+      use_esm_embeddings=True,
+      use_msa_server=False,
+      low_memory=True,
+  )
+  "
+
+input_files: [".fasta", ".fa"]
+output_patterns: ["output/pred.model_idx_*.cif", "output/scores.model_idx_*.npz"]
+
+defaults:
+  nodes: 1
+  walltime: 1800
+  queue: "express_amsc"
+  account: "amsc013"
+  constraint: "gpu"
+
+python_version: "3.12.11"
+torch_version: "2.6.0+cu124"   # chai-lab pulls its own torch; PyTorch module 2.8 is not used
+
+build_notes: |
+  Installed 2026-05-08. Install job: NERSC IRI 52726182 (elapsed 2:46).
+  Built venv with --system-site-packages from pytorch module (Python 3.12.11).
+  pip install chai-lab pulls torch 2.6.0+cu124 as a dependency (overrides module's 2.8).
+  Some non-fatal pip dependency warnings (fsspec, numpy, opencv-python) — chai-lab itself works.
+  Smoke test: chai_lab version 0.6.1, CUDA True, GPU A100-SXM4-40GB.
+
+build_status: "completed"

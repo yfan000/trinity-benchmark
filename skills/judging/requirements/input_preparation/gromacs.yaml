@@ -1,0 +1,48 @@
+# GROMACS — the .tpr is COMPILED, not authored. The clearest binary-file case in the set.
+
+binary_files: [".tpr", ".cpt", ".edr", ".xtc", ".trr"]
+
+requirements:
+  - id: INP.gromacs.tpr_not_authored
+    claim: "The .tpr is never written as text; the answer authors .mdp + .gro + .top and
+            states that grompp compiles them into the .tpr"
+    decided_by: deterministic
+    check: {kind: no_contents_for, values: [".tpr"]}
+    dimension: correctness
+    severity: fatal
+    source: "format:GROMACS"
+    rationale: >-
+      The catalog lists `.tpr` under required_inputs, which invites exactly this mistake:
+      it is required to RUN, but it is produced by `gmx grompp`, not by an editor.
+
+  - id: INP.gromacs.grompp_step_stated
+    claim: "The answer states the grompp invocation that produces the .tpr"
+    decided_by: judge
+    dimension: completeness
+    severity: major
+    source: "format:GROMACS"
+
+  - id: INP.gromacs.mdp_keys_real
+    claim: "Every .mdp key is a real GROMACS option"
+    decided_by: judge
+    dimension: correctness
+    severity: fatal
+    source: "format:GROMACS"
+    rationale: "measured defect: `nstcheckpoint = 50000` is not a valid mdp option in any
+                modern GROMACS"
+
+  - id: INP.gromacs.required_mdp_fields
+    claim: "The .mdp sets at least integrator, nsteps, coulombtype and vdwtype"
+    decided_by: deterministic
+    check: {kind: markers_present, values: ["integrator", "nsteps", "coulombtype", "vdwtype"]}
+    dimension: completeness
+    severity: major
+    source: "catalog:software/sirius/gromacs.yaml#input_detection.content_markers"
+
+free_choice:
+  - axis: "thermostat and barostat choice"
+    note: "Any physically appropriate coupling scheme is acceptable"
+    source: "model"
+  - axis: "timestep and output frequency"
+    note: "Free unless the prompt states them"
+    source: "model"

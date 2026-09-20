@@ -1,0 +1,98 @@
+# Software selection — pick the installed application that fits the workload.
+#
+# The best-performing subtask (78% fully correct) and the one that most needs protecting.
+# v3 added five rules here and the score COLLAPSED: gpt-oss went 5/10 -> 0/10, and outright
+# wrong-application picks doubled from 2/30 to 6/30. The mechanism was rule (a) — "ground
+# every claim in a catalog field and say nothing the catalog does not record" — which taught
+# models that a sparse catalog entry disqualifies a code. They began selecting whichever
+# application had the richest metadata rather than the one that fits the science.
+#
+# So this file is deliberately SHORT. Every addition here must be justified against that
+# regression.
+
+requirements:
+  - id: SOFT.common.names_one_application
+    claim: "Names exactly one installed application as the answer"
+    decided_by: deterministic
+    check: {kind: single_answer}
+    dimension: completeness
+    severity: major
+    source: "model"
+
+  - id: SOFT.common.no_vague_performance_claims
+    claim: "Makes no unquantified promise about how THIS RUN will perform — 'minimal
+            overhead', 'will reach the result quickly', 'should finish well within the
+            walltime'. A statement about what the software IS or was BUILT FOR is not a
+            performance promise and must not be flagged: 'a LINPACK benchmark optimised for
+            high-throughput BLAS/LAPACK kernels' describes the code, not a prediction."
+    decided_by: judge
+    dimension: correctness
+    severity: minor
+    source: "model"
+    rationale: >-
+      Narrowed after firing on "HPL is optimised for high-throughput BLAS/LAPACK kernels",
+      which is what HPL is — a design description, and already free under the "software
+      capability claims" axis, which covers "what it was built for". The judge was matching
+      the rule's TITLE rather than its intent, the same way claims_true_to_catalog did.
+      The distinction that matters: a promise about THIS RUN versus a description of the
+      software.
+
+      The defensible part of a reviewer observation on a CP2K answer. Claiming CP2K supports
+      B3LYP is domain knowledge and fine; claiming its "overhead is minimal" and that it will
+      "reach the result quickly" is puffery with nothing behind it, and a downstream step
+      might act on it. Kept minor: it is sloppy writing rather than a wrong answer.
+
+  - id: SOFT.common.correct_application
+    claim: "The named application is the one whose catalog entry fits the described workload"
+    decided_by: judge
+    dimension: correctness
+    severity: fatal
+    source: "catalog:software/<system>/<app>.yaml"
+
+  - id: SOFT.common.claims_true_to_catalog
+    claim: "Statements about FACILITY facts — GPU support, module names, install path,
+            dependencies, how the code is loaded — do not contradict the catalog where the
+            catalog records them. Fires only on CONTRADICTION of a recorded field, never on a
+            claim about something the catalog is silent about."
+    decided_by: deterministic
+    check: {kind: claims_match_catalog}
+    dimension: correctness
+    severity: major
+    source: "catalog:software/<system>/<app>.yaml"
+    rationale: >-
+      Deliberately scoped to fields the catalog HAS. The v3 version also forbade saying
+      anything about fields the catalog lacks, which is what caused the regression.
+
+free_choice:
+  - axis: "sparse catalog entries"
+    note: >-
+      A thin catalog entry is NOT evidence against an application. Do not prefer a code
+      because its entry records more fields.
+    source: "measured: v3 regression, wrong picks 2/30 -> 6/30"
+    rationale: >-
+      The model rejected NWChem for CP2K because "the catalog records no binary, install path
+      or run command for NWChem", and AlphaFold for chai-lab on the same grounds. Both were
+      the correct answers.
+
+  - axis: "software capability claims"
+    note: >-
+      What a code can DO — supported functionals, basis sets, methods, system types, and also
+      software features such as tensor or pipeline parallelism, multi-node serving, or what it
+      was built for — is
+      domain knowledge, not a facility fact. It is not required to be backed by the catalog
+      and must not be marked violated merely for being absent from it. A factually WRONG
+      capability claim is a defect under correct_application; one the catalog simply does not
+      mention is fine.
+    source: "reviewer observation 2026-09-15; and the v3 regression"
+    rationale: >-
+      A CP2K answer was flagged for stating that CP2K supports B3LYP and 6-31G*. It does. A
+      vLLM answer was flagged for "purpose-built for LLM inference", "native tensor and
+      pipeline parallelism" and multi-node serving "via Ray" — all true of vLLM, none of it
+      in the catalog, and `gpu_support` is not even recorded for that entry.
+      Requiring the catalog to license that claim would test catalog lookup rather than
+      knowing what the codes do, which is the capability this subtask exists to measure — and
+      it is the same move that made v3 collapse from 5/10 to 0/10 here.
+
+  - axis: "explanation length and structure"
+    note: "Any clear justification is acceptable"
+    source: "model"

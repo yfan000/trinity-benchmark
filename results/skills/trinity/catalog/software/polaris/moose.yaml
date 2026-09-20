@@ -1,0 +1,54 @@
+name: "MOOSE"
+description: "Multiphysics Object-Oriented Simulation Environment - finite-element framework from INL"
+category: "simulation"
+version: "master"
+
+binary: "/eagle/datascience/hzheng/software/moose/test/moose_test-opt"
+install_path: "/eagle/datascience/hzheng/software/moose"
+
+modules:
+  - PrgEnv-gnu
+  - gcc-native/12.3
+  - cray-mpich
+  - spack-pe-gnu
+  - cmake
+
+setup:
+  - "module load PrgEnv-gnu"
+  - "module swap gcc-native gcc-native/12.3"
+  - "module load cray-mpich"
+  - "module load spack-pe-gnu"
+  - "module load cmake"
+  - "module unload craype-accel-nvidia80"
+  - "export MOOSE_DIR=/eagle/datascience/hzheng/software/moose"
+
+gpu_support: false
+gpu_notes: "CPU-only build; GPU support available via PETSc Kokkos backend (rebuild with --with-cuda --with-cuda-arch=80)"
+
+run_command: |
+  mpiexec -n 4 --ppn 4 $MOOSE_DIR/test/moose_test-opt -i input.i
+
+input_files: ["*.i"]
+
+keywords: ["multiphysics", "finite element", "FEM", "nuclear", "thermal-hydraulics", "heat conduction", "diffusion", "MOOSE"]
+aliases: ["moose", "moose_test", "moose-test"]
+
+input_detection:
+  extensions: [".i"]
+  filenames: []
+  content_markers: ["[Mesh]", "[Variables]", "[Kernels]", "[BCs]", "[Executioner]"]
+
+defaults:
+  nodes: 1
+  walltime: 1800
+  queue: "debug"
+  ppn: 4
+
+scaling_notes: "Standard MPI scaling; 4 ranks per node typical on Polaris"
+
+required_inputs: ["*.i"]
+optional_inputs: ["*.e", "*.msh"]
+
+output_patterns: ["*_out.e", "*.csv", "*.log"]
+
+notes: "Built from source via jobs/polaris/build_moose/run.sh. Dependencies (PETSc, libMesh, WASP) are compiled in-tree."

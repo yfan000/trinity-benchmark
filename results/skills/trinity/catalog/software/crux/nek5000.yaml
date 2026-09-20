@@ -1,0 +1,47 @@
+name: "Nek5000"
+description: "Nek5000 spectral element CFD solver (CPU-only build)"
+category: simulation
+version: ""
+
+binary: "/eagle/datascience/hzheng/software/crux/nek5000/bin/makenek"
+install_path: "/eagle/datascience/hzheng/software/crux/nek5000"
+
+modules: []
+
+setup:
+  - "module swap PrgEnv-cray PrgEnv-gnu"
+  - "module load cray-mpich"
+  - "module load cray-fftw"
+  - "export PATH=/eagle/datascience/hzheng/software/crux/nek5000/bin:$PATH"
+  - "export NEK_SOURCE_ROOT=/eagle/datascience/hzheng/software/crux/nek5000"
+
+gpu_support: false
+
+run_command: |
+  mpiexec -n 16 --ppn 16 nek5000
+
+input_files: [".rea", ".usr", "SIZE"]
+
+keywords: ["CFD", "computational fluid dynamics", "spectral element", "Nek5000"]
+aliases: ["nek5000", "nek"]
+
+input_detection:
+  extensions: [".rea", ".usr"]
+  filenames: ["SIZE"]
+  content_markers: ["MESH DATA", " **MESH DATA**"]
+
+defaults:
+  nodes: 1
+  walltime: 1800
+  queue: "workq"
+  ppn: 128
+
+scaling_notes: "CPU-only build. Nek5000 requires case-specific compilation with SIZE file. Typical runs use 16-128 MPI ranks."
+
+required_inputs: [".rea", "SIZE"]
+optional_inputs: [".usr", ".re2", ".ma2"]
+output_patterns: ["*.log", "*.f*", "*.nek5000"]
+
+build_status: built
+
+notes: "CPU-only build with PrgEnv-gnu (GCC 13.2) + cray-mpich + cray-fftw on Crux. Each case must be recompiled with appropriate SIZE parameters."

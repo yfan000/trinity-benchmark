@@ -1,0 +1,60 @@
+name: "Python / Conda (frameworks)"
+description: "Intel oneAPI ML stack via module load frameworks — PyTorch 2.8, vLLM 0.10.1rc2, DeepSpeed 0.17.5 on Intel PVC XPU"
+category: ml-framework
+version: "2025.3.1"
+
+binary: "python"
+install_path: "/soft/frameworks/2025.3.1"
+
+modules:
+  - frameworks
+
+setup:
+  - "module load frameworks"
+
+gpu_support: true
+gpu_notes: |
+  Intel Data Center GPU Max Series (Ponte Vecchio), 6 XPU tiles per node.
+  Use torch.xpu device. ONEAPI_DEVICE_SELECTOR set automatically by the module.
+  ZE_FLAT_DEVICE_HIERARCHY=FLAT exposes 12 PVC tiles as devices.
+
+run_command: |
+  python train.py                              # single tile
+  mpiexec -n 6 --ppn 6 python train.py        # all 6 tiles, 1 node
+
+input_files: [".py"]
+
+keywords: ["python", "pytorch", "vllm", "deepspeed", "machine learning", "deep learning", "training", "neural network", "ML", "AI", "fine-tune", "LLM", "transformer", "XPU", "Intel GPU"]
+aliases: ["python", "conda", "pytorch", "torch", "frameworks", "intel-frameworks"]
+
+input_detection:
+  extensions: [".py"]
+  filenames: ["train.py", "main.py", "run.py", "requirements.txt"]
+  content_markers: ["import torch", "import tensorflow", "import numpy", "from torch"]
+
+defaults:
+  nodes: 1
+  walltime: 1800
+  queue: "debug"
+  account: "datascience"
+  ppn: 6
+
+scaling_notes: "6 XPU tiles per node. Use torch.xpu device. XCCL backend for distributed. mpiexec -n 6 --ppn 6 for single-node multi-tile."
+
+required_inputs: [".py"]
+optional_inputs: [".yaml", ".json", ".pt", ".pth", ".safetensors"]
+
+output_patterns: ["*.log", "*.pt", "*.pth", "*.safetensors", "*.csv"]
+
+notes: |
+  frameworks/2025.3.1 bundles: PyTorch 2.8.0a0, torchvision 0.23.0a0, torchao 0.12.0,
+  torchtune 0.6.1, intel-extension-for-pytorch 2.8.10, deepspeed 0.17.5,
+  vllm 0.10.1rc2, numpy 2.0.2, mpi4py 4.1.0, h5py 3.14.0.
+
+  Module sets automatically:
+    ONEAPI_DEVICE_SELECTOR="opencl:gpu;level_zero:gpu"  (enables Triton-XPU, vLLM, Ray, dpctl)
+    ZE_FLAT_DEVICE_HIERARCHY=FLAT  (exposes 12 PVC tiles)
+
+  DO NOT also load conda or python from the Spack PE — will conflict with frameworks Python.
+  PBS account: datascience (Aurora_deployment has no active compute allocation).
+  Set PYTHONNOUSERSITE=1 to avoid stale ~/.local packages leaking in from ClearML tasks.

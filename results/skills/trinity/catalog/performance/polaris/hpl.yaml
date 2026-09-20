@@ -1,0 +1,17 @@
+app: hpl
+system: polaris
+version: "2.3 (cray-libsci BLAS, GCC 12.3, cray-mpich)"
+benchmark:
+  name: "HPL LINPACK N=50000 (2x2 process grid, NB=232)"
+  nodes: 1
+  gpus_per_node: 0
+  mpi_ranks: 4
+  walltime_s: 452
+  throughput: 192.57
+  throughput_unit: "GFLOPS"
+  date: "2026-05-11"
+  job_script: "jobs/polaris/smoke_tests_genesis/hpl/run.sh"
+notes: |
+  Smoke test on genesisdemo reservation (A100 node). CPU-only HPL.
+  WR11C2R4: N=50000 NB=232 P=2 Q=2 → 192.57 GFLOPS.
+  Binary: /eagle/datascience/hzheng/software/polaris/hpl/bin/xhpl

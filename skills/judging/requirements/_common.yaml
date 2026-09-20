@@ -1,0 +1,52 @@
+# Rules that hold for EVERY subtask. Loaded first, before the subtask and software files.
+#
+# This file exists because the same mistake was made four separate times in one review pass,
+# each time caught only by a human reading a judgement:
+#
+#   claims_true_to_catalog        fired on catalog SILENCE, not contradiction
+#   ranks_match_build_defaults    judged against defaults that did not EXIST
+#   no_invented_keywords          treated absence from an EXAMPLE as invention
+#   no_invented_numbers           forbade the only way to answer at all
+#
+# All four punished a model for the material WE supplied being incomplete. Stating the
+# principle once, at the top, is cheaper than discovering it a fifth time.
+
+requirements: []
+
+free_choice:
+
+  - axis: "any value the prompt does not fix"
+    note: >-
+      A number the answer supplies is NOT a defect merely because the prompt did not supply
+      it. The task requires numbers — a walltime, a cutoff, a node count, a batch size — and
+      the prompts routinely give problem SIZE without giving a RATE or a default. Inventing a
+      value is therefore the only way to answer at all.
+
+      Mark such a value violated ONLY when it fails one of three tests:
+        1. it contradicts something the prompt DOES state;
+        2. it breaks a system limit (queue node/walltime caps, hardware counts) — and those
+           are already decided in code, so the judge should not re-litigate them;
+        3. it defies common sense for the science described — hundreds of nodes for a
+           two-atom molecule, a femtosecond timestep for a protein folding run.
+
+      Otherwise the value is acceptable, however arbitrary it looks. Do not deduct because a
+      different value would have been better, more conservative, or more typical.
+    source: "project decision 2026-09-15"
+    rationale: >-
+      Established after four rules were found to punish models for supplying values the
+      prompt omitted. The remaining, legitimate concern is HONESTY about where a number came
+      from, which is covered separately: an assumption must be labelled as one
+      (RES.common.walltime_basis_honest) and must not be dressed up as a measurement or a
+      prior observation (RES.common.no_fabricated_evidence).
+
+  - axis: "absence of evidence"
+    note: >-
+      Silence in the supplied material is never evidence against an answer. If the catalog
+      does not record a field, the worked example does not show a directive, or the prompt
+      does not mention a capability, that is not grounds for a violation. A rule fires on
+      CONTRADICTION of something recorded, never on the recorded material being incomplete.
+    source: "measured: four rules with this defect, r7 through r11"
+    rationale: >-
+      Any rule whose wording contains "not supported by the supplied material", "not in the
+      catalog" or "not shown in the example" should be read as suspect and re-checked against
+      this axis before it is trusted.

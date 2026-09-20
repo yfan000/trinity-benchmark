@@ -1,0 +1,51 @@
+name: "GROMACS (HIP/ROCm)"
+description: "GPU-accelerated GROMACS via HIP/ROCm for AMD MI250X on Frontier"
+category: simulation
+version: "2024.4"
+build_status: built
+
+binary: "/ccs/proj/csc708/hzheng/software/frontier/gromacs_hip/bin/gmx_mpi"
+install_path: "/ccs/proj/csc708/hzheng/software/frontier/gromacs_hip"
+
+modules:
+  - PrgEnv-amd
+  - rocm
+
+setup:
+  - "module load PrgEnv-amd"
+  - "module load rocm"
+  - "export PATH=/ccs/proj/csc708/hzheng/software/frontier/gromacs_hip/bin:$PATH"
+
+gpu_support: true
+gpu_notes: "GPU offloading via HIP/ROCm on AMD MI250X (8 GCDs per node). Non-bonded, PME, and bonded interactions offloaded."
+
+run_command: |
+  srun -N 1 --ntasks-per-node 8 gmx_mpi mdrun -deffnm simulation -nb gpu -pme gpu -bonded gpu
+
+input_files: [".tpr", ".gro", ".mdp", ".top"]
+
+keywords: ["molecular dynamics", "MD simulation", "biomolecular", "GROMACS", "protein", "lipid", "ROCm", "HIP", "AMD GPU", "MI250X", "Frontier"]
+aliases: ["gromacs", "gromacs_hip", "gmx", "gmx_mpi", "mdrun", "gromacs-gpu"]
+
+input_detection:
+  extensions: [".tpr", ".gro", ".mdp", ".top"]
+  filenames: []
+  content_markers: ["integrator", "nsteps", "dt", "coulombtype"]
+
+defaults:
+  nodes: 1
+  walltime: 1800
+  partition: "batch"
+  account: "CSC708"
+  ppn: 8
+
+scaling_notes: "Use 1 MPI rank per GCD (8 per node). GPU offload flags: -nb gpu -pme gpu -bonded gpu."
+
+required_inputs: [".tpr"]
+optional_inputs: [".gro", ".mdp", ".top", ".ndx", ".cpt"]
+
+output_patterns: ["*.log", "*.edr", "*.trr", "*.xtc", "*.gro"]
+
+notes: |
+  Built 2026-05-05. HIP/ROCm GPU-accelerated build on Frontier MI250X.
+  Build script: jobs/frontier/build_gromacs_hip/run.sh

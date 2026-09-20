@@ -1,0 +1,64 @@
+name: "NekRS"
+description: "GPU-accelerated spectral element CFD solver (Navier-Stokes) based on Nek5000"
+category: simulation
+version: "next"
+
+binary: "/eagle/datascience/hzheng/software/nekrs/bin/nekrs"
+install_path: "/eagle/datascience/hzheng/software/nekrs"
+
+modules:
+  - cudatoolkit-standalone/12.9
+  - cuda/12.9
+  - gcc-native/13.2
+
+setup:
+  - "module restore"
+  - "module use /soft/modulefiles"
+  - "module swap PrgEnv-nvidia PrgEnv-gnu"
+  - "module load cudatoolkit-standalone/12.9"
+  - "module load cuda/12.9"
+  - "module load gcc-native/13.2"
+  - "module load craype-x86-milan craype-accel-nvidia80"
+  - "module load spack-pe-base cmake"
+  - "export NEKRS_HOME=/eagle/datascience/hzheng/software/nekrs"
+  - "export PATH=$NEKRS_HOME/bin:$PATH"
+  - "export MPICH_GPU_SUPPORT_ENABLED=1"
+  - "export NEKRS_GPU_MPI=1"
+  - "export MPIR_CVAR_CH4_OFI_ENABLE_RMA=0"
+
+gpu_support: true
+gpu_notes: "Native CUDA on A100 GPUs via OCCA backend"
+
+run_command: |
+  # nekRS uses 1 MPI rank per GPU (4 GPUs/node on Polaris)
+  # GPU affinity helper assigns GPUs inversely to MPI local rank
+  mpiexec -n $NTASKS -ppn 4 -d 8 --cpu-bind depth ./.lhelper nekrs --setup <casename> --backend CUDA --device-id 0
+
+input_files: [".par", ".re2", ".udf", ".usr", ".oudf"]
+
+# --- Auto-detection ---
+keywords: ["CFD", "spectral element", "GPU", "Navier-Stokes", "turbulence", "LES", "DNS", "nekRS", "OCCA"]
+aliases: ["nekrs", "nek-rs", "nekrs-gpu"]
+
+input_detection:
+  extensions: [".par", ".re2", ".udf", ".oudf"]
+  filenames: []
+  content_markers: ["[GENERAL]", "[MESH]", "[VELOCITY]", "[PRESSURE]"]
+
+# --- Smart defaults ---
+defaults:
+  nodes: 1
+  walltime: 1800
+  queue: "debug"
+  ppn: 4
+
+scaling_notes: "nekRS uses 1 MPI rank per GPU (4 per node on Polaris). Scale by increasing node count. Precompile kernels on first run (--build-only) to avoid timeout."
+
+# --- Input validation ---
+required_inputs: [".par", ".re2", ".udf"]
+optional_inputs: [".usr", ".oudf", ".geo", ".msh"]
+
+# --- Output retrieval ---
+output_patterns: ["*.fld", "*.f0*", "logfile", "SESSION.NAME", "nekRS.log*"]
+
+notes: "nekRS compiles OCCA kernels at runtime on first launch. Use --build-only for precompilation. Set NEKRS_CACHE_BCAST=1 to reduce I/O load on multi-node runs."

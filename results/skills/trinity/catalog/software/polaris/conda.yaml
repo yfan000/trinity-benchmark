@@ -1,0 +1,166 @@
+name: "Python / Conda"
+description: "Default ALCF Polaris scientific Python stack (PyTorch + TensorFlow + common ML/HPC libs). Provided by the `conda` module; activate and use as-is, or layer additional pip packages with --user."
+category: ml-framework
+version: "2025-09-25 (current `module load conda` default; older 2024-04-29 path may also be present but is being phased out)"
+
+binary: "python"
+install_path: "/soft/applications/conda/2025-09-25/mconda3"
+python_version: "3.12"
+
+modules:
+  - conda
+
+setup:
+  - "module use /soft/modulefiles"
+  - "module load conda"
+  - "conda activate"
+
+# Optional alternative: activate the legacy 2024-04-29/pytorch sub-env directly
+# (not recommended — older PyTorch / Python 3.11; may be removed)
+setup_legacy_pytorch_env:
+  - "module use /soft/modulefiles"
+  - "module load conda"
+  - "conda activate /soft/applications/conda/2024-04-29/pytorch"
+
+gpu_support: true
+gpu_notes: |
+  PyTorch via torch.cuda; TensorFlow via tf.config.list_physical_devices('GPU').
+  CUDA, NCCL, and cuDNN are bundled. All 4 A100s/node visible by default;
+  set CUDA_VISIBLE_DEVICES to constrain.
+
+run_command: |
+  python train.py                                                      # single GPU / single node
+  mpiexec -n 4 --ppn 4 --cpu-bind depth -d 16 python train.py          # 4 GPUs single node
+  mpiexec -n $((NRANKS_PER_NODE*NNODES)) --ppn $NRANKS_PER_NODE \
+    --cpu-bind depth -d 16 python train.py                             # multi-node
+
+input_files: [".py"]
+
+# --- Bundled libraries (install_path/pytorch sub-env) ---
+bundled_packages:
+  python: "3.11"
+  pytorch: "2.3.0"
+  tensorflow: "2.16.x"     # note: ships with keras 3.x — see Gotchas below
+  numpy: "1.26"
+  scipy: ">=1.11"
+  pandas: ">=2.0"
+  mpi4py: ">=3.1"
+  horovod: "0.28"
+  deepspeed: "0.14"
+  transformers: "~=4.40"   # OLD: gemma-3 / latest model arches require >=4.50
+  datasets: "~=2.18"
+  accelerate: "~=0.29"
+  notes: "Snapshot — confirm with `pip list` inside the env. Versions drift over time."
+
+# --- Auto-detection ---
+keywords: ["python", "pytorch", "tensorflow", "machine learning", "deep learning", "training", "neural network", "ML", "AI", "fine-tune", "LLM", "transformer", "CNN", "resnet", "mnist", "huggingface"]
+aliases: ["python", "conda", "pytorch", "tensorflow", "torch", "tf"]
+
+input_detection:
+  extensions: [".py"]
+  filenames: ["train.py", "main.py", "run.py", "requirements.txt"]
+  content_markers: ["import torch", "import tensorflow", "import numpy", "from torch", "from transformers"]
+
+# --- Smart defaults ---
+defaults:
+  nodes: 1
+  walltime: 600
+  queue: "debug"
+  ppn: 4
+
+scaling_notes: "Single GPU: ppn=1. Multi-GPU single node: ppn=4 with mpiexec or torchrun --nproc_per_node=4. Multi-node distributed: torch.distributed (NCCL backend) or Horovod with appropriate ppn. Set MASTER_ADDR/MASTER_PORT for multi-node."
+
+# --- Input validation ---
+required_inputs: [".py"]
+optional_inputs: [".yaml", ".json", ".csv", ".pt", ".pth", ".h5", "requirements.txt"]
+
+# --- Output retrieval ---
+output_patterns: ["*.log", "*.pt", "*.pth", "*.h5", "*.csv", "checkpoints/", "logs/"]
+
+# --- Layering additional packages (recommended pattern) ---
+extending:
+  description: |
+    For LLM SFT (gemma, llama, etc.), the bundled `transformers` is usually too old.
+    Layer the SFT-specific stack on top with --user, cached on Eagle so reinstalls
+    are instant on the second run.
+  template: |
+    export PIP_CACHE_DIR=$WORK_DIR/.pip_cache
+    mkdir -p "$PIP_CACHE_DIR"
+    unset PYTHONNOUSERSITE                       # in case the parent env set it
+    python -m pip install --quiet --user --upgrade \
+      "transformers>=4.50,<4.55" \
+      "peft>=0.13" \
+      "trl>=0.12,<0.16" \
+      "accelerate>=0.34" \
+      "datasets>=2.20" \
+      "sentencepiece" \
+      "tf-keras"                                # Keras 3 shim — see Gotchas
+  storage: "Installs land in ~/.local/lib/python3.11/site-packages — survive across PBS jobs."
+
+# --- Gotchas (lessons from real runs) ---
+gotchas:
+  - id: "clearml-agent-env-contamination"
+    summary: |
+      ClearML PBS-bridge agent on Polaris hardwires
+      `agent.python_binary = /home/hzheng/clearml/miniconda3/bin/python` (Python 3.13).
+      It pre-activates this env BEFORE running your script. `module load conda`
+      then layers /soft/applications/conda/2025-09-25/mconda3 (Python 3.12) on
+      top — and any subsequent Python 3.13 invocation that tries to load .pth
+      files from the 3.12 site-packages crashes with
+      `AssertionError: SRE module mismatch` (cross-version bytecode mismatch).
+    fix: |
+      At the very top of your run.sh, before `module load conda`, fully purge
+      the inherited Python env:
+        unset PYTHONHOME PYTHONPATH CONDA_PREFIX CONDA_DEFAULT_ENV CONDA_PYTHON_EXE
+        unset _CE_CONDA _CE_M CONDA_SHLVL CONDA_PROMPT_MODIFIER
+        export PATH=$(echo "$PATH" | tr ':' '\n' | grep -v 'clearml/miniconda3' | tr '\n' ':' | sed 's/:$//')
+      Then `module use /soft/modulefiles && module load conda && conda activate`.
+    seen_on: "2026-05-12 — gemma-3-27b LoRA SFT v3 (task 669bac15...) on x3001c0s13b0n0"
+  - id: "no-module-purge"
+    summary: "Never run `module purge` on Polaris — strips Cray PE, breaks `module load PrgEnv-*` afterward. Use `module swap` or just `module load`."
+    source: ".claude/memory/feedback_polaris_no_module_purge.md"
+  - id: "home-quota-vs-pip-user"
+    summary: |
+      `pip install --user` writes to ~/.local which sits on the home filesystem
+      (small per-user quota). For multi-GB ML deps (transformers, torch wheels,
+      tf-keras), this fails with `[Errno 122] Disk quota exceeded` — sometimes
+      partway through, leaving a half-installed env that breaks later imports.
+    fix: |
+      Redirect --user to a project filesystem with PYTHONUSERBASE:
+        export PYTHONUSERBASE=$WORK_DIR/.userbase  # Eagle path, not /home
+        mkdir -p "$PYTHONUSERBASE"
+        PY_VER=$(python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
+        export PYTHONPATH=$PYTHONUSERBASE/lib/python$PY_VER/site-packages:$PYTHONPATH
+      Then `pip install --user ...` lands on Eagle. Persists across runs.
+    seen_on: "2026-05-12 — gemma-3-27b LoRA SFT v4 (task 8c91b0b8...)"
+  - id: "keras3-trl-import-crash"
+    summary: |
+      TensorFlow 2.16+ ships Keras 3 by default, but `transformers.modeling_tf_utils`
+      requires the legacy Keras 2 interface. Importing `trl.SFTTrainer` (which
+      pulls `transformers.Trainer` → `transformers.integrations` → TFPreTrainedModel)
+      crashes with: ValueError("Keras 3 not yet supported in Transformers").
+      `TRANSFORMERS_NO_TF=1` and `USE_TF=0` do NOT prevent this code path.
+    fix: "pip install --user tf-keras (back-compat shim) — works without removing TF."
+    seen_on: "2026-05-12 — gemma-3-27b LoRA SFT (jobs/polaris/gemma3_askalcf_sft, task e538f59b...)"
+  - id: "old-transformers-version"
+    summary: "Bundled transformers ~4.40 lacks gemma-3, qwen-3, llama-3.3 architectures. Pip --user upgrade to >=4.50."
+    fix: "See `extending.template` above."
+  - id: "pythonnousersite-suppression"
+    summary: "Some inherited shells (notably from clearml-agent services-mode) set PYTHONNOUSERSITE=1, which makes Python ignore --user installs and silently use the bundled (old) transformers."
+    fix: "Always `unset PYTHONNOUSERSITE` after activating conda when relying on --user installs."
+  - id: "device_map-vs-deepspeed-zero3"
+    summary: |
+      For LoRA on a 27B model across 4×A100 40GB on one node, prefer
+      transformers' `device_map='auto'` (model-parallel, single process) over
+      DeepSpeed ZeRO-3 + LoRA. ZeRO-3 partitions frozen base params and
+      interferes with peft's optimizer-state expectations; device_map keeps
+      the base on-GPU and only shards by layer.
+    seen_on: "2026-05-12 — gemma-3-27b LoRA SFT — used device_map='auto' successfully."
+
+notes: |
+  Prefer the official `module load conda` env over the per-user
+  /home/<user>/clearml/miniconda3 env when possible — the latter ships with
+  Keras 3 + tensorflow but no clean way to gate trl/transformers imports.
+  When you need bleeding-edge HF packages, layer with --user (see `extending`).
+
+build_status: "installed"

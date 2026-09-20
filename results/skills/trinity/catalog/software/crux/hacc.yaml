@@ -1,0 +1,45 @@
+name: "HACC"
+description: "Hardware/Hybrid Accelerated Cosmology Code (HACC) N-body cosmology simulation (CPU-only build)"
+category: simulation
+version: ""
+
+binary: "/eagle/datascience/hzheng/software/crux/hacc/bin/hacc"
+install_path: "/eagle/datascience/hzheng/software/crux/hacc"
+
+modules: []
+
+setup:
+  - "module swap PrgEnv-cray PrgEnv-gnu"
+  - "module load cray-mpich"
+  - "export PATH=/eagle/datascience/hzheng/software/crux/hacc/bin:$PATH"
+
+gpu_support: false
+
+run_command: |
+  mpiexec -n 64 --ppn 64 hacc input.params
+
+input_files: [".params", ".pk", ".indat"]
+
+keywords: ["cosmology", "N-body", "HACC", "simulation", "dark matter", "particle mesh"]
+aliases: ["hacc", "hacc-pm"]
+
+input_detection:
+  extensions: [".params"]
+  filenames: []
+  content_markers: ["SIMULATION_NAME", "NUM_PARTICLES", "STEPS"]
+
+defaults:
+  nodes: 1
+  walltime: 3600
+  queue: "workq"
+  ppn: 128
+
+scaling_notes: "CPU-only build. HACC scales well with MPI. Use 64-128 ranks per node on Crux for large cosmological simulations."
+
+required_inputs: [".params"]
+optional_inputs: [".indat"]
+output_patterns: ["*.pk", "*.halodat", "*.soddat", "*.log"]
+
+build_status: needs_build
+
+notes: "CPU-only build with PrgEnv-gnu (GCC 13.2) + cray-mpich on Crux. HACC is developed at Argonne; contact ALCF for access to source."

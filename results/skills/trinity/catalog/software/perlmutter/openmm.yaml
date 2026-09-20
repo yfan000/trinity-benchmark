@@ -1,0 +1,52 @@
+name: "OpenMM"
+description: "GPU-accelerated molecular dynamics simulation toolkit via conda environment"
+category: simulation
+version: ""
+
+binary: "/global/cfs/cdirs/dasrepo/hzheng/software/perlmutter/openmm_venv_v1/bin/python"
+install_path: "/global/cfs/cdirs/dasrepo/hzheng/software/perlmutter/openmm_venv_v1"
+build_status: built
+
+modules:
+  - conda
+
+setup:
+  - "module reset"
+  - "module load conda"
+  - "conda activate openmm_env"
+
+gpu_support: true
+gpu_notes: "CUDA GPU platform for high-performance MD; also supports CPU and OpenCL"
+
+run_command: |
+  srun -n 1 -G 1 python simulation.py
+
+input_files: [".py", ".pdb", ".xml"]
+
+# --- Auto-detection ---
+keywords: ["OpenMM", "molecular dynamics", "MD simulation", "AMBER", "CHARMM", "force field", "GPU MD", "implicit solvent", "alchemical"]
+aliases: ["openmm", "openmm-md"]
+
+input_detection:
+  extensions: [".py"]
+  filenames: ["simulation.py"]
+  content_markers: ["import openmm", "from openmm", "import simtk", "System()", "Simulation(", "Platform.getPlatformByName"]
+
+# --- Smart defaults ---
+defaults:
+  nodes: 1
+  walltime: 3600
+  queue: "debug"
+  constraint: "gpu"
+  account: "dasrepo"
+
+scaling_notes: "Single GPU per simulation job. Parallelize by submitting multiple independent replicas. For enhanced sampling, use OpenMMTools or custom replica exchange scripts."
+
+# --- Input validation ---
+required_inputs: [".py"]
+optional_inputs: [".pdb", ".xml", ".psf", ".crd"]
+
+# --- Output retrieval ---
+output_patterns: ["*.dcd", "*.pdb", "*.csv", "*.xml", "checkpoint.chk"]
+
+notes: "Needs build: module load conda; conda create -n openmm_env -c conda-forge openmm cudatoolkit=11.8. Verify GPU platform: python -c 'import openmm; print([openmm.Platform.getPlatform(i).getName() for i in range(openmm.Platform.getNumPlatforms())])'"

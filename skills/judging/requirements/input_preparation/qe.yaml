@@ -1,0 +1,88 @@
+# Quantum ESPRESSO (pw.x) — Fortran namelist input.
+# Rules from the format spec plus defects measured on real model answers.
+# Grounded by 11 real QE runs in the Polaris archive (7 with confirmed success).
+
+binary_files: [".UPF"]        # pseudopotentials are external, referenced not authored
+
+requirements:
+  - id: INP.qe.namelist_syntax
+    claim: "Namelist values are literals — no arithmetic expressions"
+    decided_by: deterministic
+    check: {kind: regex_absent, pattern: '(?m)^\s*\w+\s*(\([^)]*\))?\s*=\s*[^!,\n]*[*/+]\s*\d'}
+    dimension: correctness
+    severity: fatal
+    source: "format:Fortran namelist"
+    rationale: "measured defect: `celldm(1) = 4.3596*10` — pw.x aborts reading &system"
+
+  - id: INP.qe.required_namelists
+    claim: "Contains the &CONTROL, &SYSTEM and &ELECTRONS namelists, each terminated by /"
+    decided_by: deterministic
+    check: {kind: markers_present, values: ["&CONTROL", "&SYSTEM", "&ELECTRONS"]}
+    dimension: completeness
+    severity: fatal
+    source: "catalog:software/polaris/qe.yaml#input_detection.content_markers"
+
+  - id: INP.qe.required_cards
+    claim: "Contains the ATOMIC_SPECIES, ATOMIC_POSITIONS and K_POINTS cards"
+    decided_by: deterministic
+    check: {kind: markers_present, values: ["ATOMIC_SPECIES", "ATOMIC_POSITIONS", "K_POINTS"]}
+    dimension: completeness
+    severity: fatal
+    source: "format:QE pw.x"
+
+  - id: INP.qe.nat_matches_positions
+    claim: "nat equals the number of ATOMIC_POSITIONS lines written"
+    decided_by: deterministic
+    check: {kind: count_match, declares: 'nat\s*=\s*(\d+)', counts_card: "ATOMIC_POSITIONS"}
+    dimension: correctness
+    severity: fatal
+    source: "format:QE pw.x"
+    rationale: "measured defect: nat=64 declared, 26 positions listed (8 Si + 18 C)"
+
+  - id: INP.qe.ntyp_matches_species
+    claim: "ntyp equals the number of ATOMIC_SPECIES lines written"
+    decided_by: deterministic
+    check: {kind: count_match, declares: 'ntyp\s*=\s*(\d+)', counts_card: "ATOMIC_SPECIES"}
+    dimension: correctness
+    severity: fatal
+    source: "format:QE pw.x"
+
+  - id: INP.qe.no_card_terminator
+    claim: "Cards are not terminated with `/` — only namelists are"
+    decided_by: deterministic
+    check: {kind: regex_absent, pattern: '(?ms)ATOMIC_POSITIONS.*?^\s*/\s*$'}
+    dimension: usability
+    severity: major
+    source: "format:QE pw.x"
+    rationale: "measured defect: stray `/` after the ATOMIC_POSITIONS card"
+
+  - id: INP.qe.ibrav_consistent
+    claim: "ibrav matches the cell actually described; if ibrav=0 a CELL_PARAMETERS card
+            is present"
+    decided_by: judge
+    dimension: correctness
+    severity: major
+    source: "format:QE pw.x"
+    rationale: "measured defect: ibrav=2 (1-atom FCC primitive) used for a 2x2x2 conventional cell"
+
+  - id: INP.qe.pseudopotentials_plausible
+    claim: "Each ATOMIC_SPECIES line names a pseudopotential that exists for that element
+            in the named family"
+    decided_by: judge
+    dimension: correctness
+    severity: major
+    source: "format:QE"
+    rationale: >-
+      measured defect: `Si.pz-vbc.UPF` and `C.pz-vbc.UPF` copied from the worked example;
+      the carbon file does not exist in that family
+
+free_choice:
+  - axis: "ecutwfc / ecutrho"
+    note: "Any physically reasonable cutoff is acceptable unless the prompt states one"
+    source: "run: successful QE runs in the archive use a range of cutoffs"
+  - axis: "outdir / prefix / pseudo_dir"
+    note: "Any consistent choice is acceptable"
+    source: "run:11 QE scripts use differing conventions"
+  - axis: "k-point mesh"
+    note: "Any mesh consistent with the stated system is acceptable unless the prompt fixes it"
+    source: "model"

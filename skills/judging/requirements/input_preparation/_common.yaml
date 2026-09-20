@@ -1,0 +1,211 @@
+# Input preparation — rules that hold for every application.
+#
+# Worst-scoring subtask (15% answer-correct) and the most capability-bound: 53% of its
+# recorded defects were judged unreachable by any prompt change. That makes accurate judging
+# especially important — if the measurement is noisy here, there is nothing left to improve.
+#
+# These rules are keyed on the SUBTASK, not on (subtask, system), because input formats do not
+# change between machines. A QE namelist is the same on Polaris and Aurora.
+
+requirements:
+
+  - id: INP.common.all_required_files_present
+    claim: "Every file the catalog lists as required is produced"
+    decided_by: deterministic
+    # The alternation is load-bearing, not decoration: 97 catalog entries carry
+    # `required_inputs` and 96 carry `input_files`, and since r26 made `field:` actually mean
+    # something, declaring only the first would silently stop checking dozens of applications.
+    check: {kind: file_present, field: "required_inputs|input_files"}
+    dimension: completeness
+    severity: fatal
+    source: "catalog:software/<system>/<app>.yaml#required_inputs"
+
+  # INP.common.content_markers_present was REMOVED in r26. It applied
+  # `input_detection.content_markers` as an all-of completeness requirement, and that field is a
+  # file-TYPE detection heuristic with any-of semantics — "does this look like an NWChem deck?".
+  # It became the largest single violation source in the subtask, 19 of 38 rows, and was wrong
+  # in nearly every instance:
+  #     missing: echo, memory stack             NWChem  — optional directives
+  #     missing: ACDEFGHIKLMNPQRSTVWY           AlphaFold — the amino-acid ALPHABET, which no
+  #                                             real FASTA contains; it holds a sequence
+  #     missing: [MESH], [VELOCITY], [PRESSURE] nekRS   — optional sections
+  #     missing: dump                           LAMMPS  — optional output
+  #     missing: vdwtype                        GROMACS — defaults to cut-off
+  # Four answers had it as their ONLY violation. The concept is replaced by the two rules below,
+  # which separate what the one rule was conflating.
+
+  - id: INP.common.mandatory_sections_present
+    claim: "Each produced file contains the sections its format genuinely requires"
+    decided_by: deterministic
+    check: {kind: sections_present}
+    dimension: completeness
+    severity: major
+    source: "curated:skills/format_contracts.yaml"
+    rationale: >-
+      Reads the curated per-format list, which carries only what the application refuses to run
+      without; anything conditional or defaulted sits in that file's `expected` and is never
+      required here. Those lists are format knowledge rather than run-derived, so this is major
+      and not fatal until a real run or a domain reviewer confirms them.
+
+  - id: INP.common.file_identifiable
+    claim: "What the answer wrote is recognisable as this application's input format"
+    decided_by: deterministic
+    check: {kind: file_identifiable, field: "input_detection.content_markers"}
+    dimension: correctness
+    severity: major
+    source: "catalog:software/<system>/<app>.yaml#input_detection"
+    rationale: >-
+      ANY-OF, which is what input_detection is actually for. Catches the real failure — a
+      confident, well-formatted file in the WRONG format — without demanding every optional
+      marker. A file matching none of its application's markers is not that application's input.
+
+  - id: INP.common.exact_filenames_used
+    claim: "Files the application opens by an EXACT, FIXED name are given that name. This
+            applies ONLY where the format contract sets `fixed_filenames: true` — xhpl reads
+            only `HPL.dat`, VASP only INCAR/POSCAR/POTCAR/KPOINTS, WRF only namelist.input.
+            For every other application the filenames are command-line arguments the user
+            chooses (`gmx grompp -c lysozyme.gro`, `lmp -in anything`), so this requirement is
+            NOT APPLICABLE and must be returned as such, never as satisfied or violated."
+    decided_by: deterministic
+    check: {kind: filenames_present, field: "input_detection.filenames"}
+    dimension: correctness
+    severity: major
+    source: "catalog:software/<system>/<app>.yaml#input_detection.filenames"
+    rationale: >-
+      `xhpl` opens `HPL.dat` and nothing else; VASP opens INCAR/POSCAR/POTCAR/KPOINTS; WRF opens
+      namelist.input. 46 entries record such names and no check read them. Entries whose
+      extension is not an input extension are skipped — alphafold@perlmutter lists
+      `run_alphafold.py`, its driver script, not an input.
+
+  - id: INP.common.no_output_as_input
+    claim: "No contents are written for a file the run itself produces"
+    decided_by: deterministic
+    check: {kind: outputs_not_authored}
+    dimension: correctness
+    severity: major
+    source: "catalog:software/<system>/<app>.yaml#output_patterns"
+    rationale: >-
+      Generalises no_binary_contents from three hand-written rubric lists to the 101 catalog
+      entries that record output_patterns. Outputs that are ALSO inputs are subtracted —
+      gromacs@sirius lists `md.gro` as an output while `.gro` is legitimately authored — and the
+      hand-written lists are unioned in rather than replaced, because they encode what the
+      catalog does not: `.tpr` sits in required_inputs yet grompp compiles it.
+
+      MAJOR, not fatal. The measured cases are models listing `water.out` and `water.log` as
+      files to deliver, with contents reading "# will be generated by NWChem" — a real error
+      (those are not inputs) but not the fabrication that motivated the fatal grade. The
+      genuinely fatal case, a `.tpr` authored as text when grompp compiles it, stays fatal
+      under no_binary_contents and INP.gromacs.tpr_not_authored.
+
+  - id: INP.common.no_binary_contents
+    claim: "No text contents are invented for a binary or runtime-generated file; those are
+            listed as produced at runtime instead"
+    decided_by: deterministic
+    # `__rubric.` reads the binary_files list from THIS library, not the catalog — the catalog
+    # has no such field. Before r26 the `field:` declaration was ignored and the path hardcoded,
+    # so "binary_files" happened to work; once declarations were honoured it resolved to a
+    # missing catalog key and quietly turned the rule into an unconditional pass.
+    check: {kind: no_contents_for, field: "__rubric.binary_files"}
+    dimension: correctness
+    severity: fatal
+    source: "format:per-application, see each software file"
+    rationale: >-
+      Measured repeatedly: text written into NWChem `.db` and `.movecs`, and a GROMACS `.tpr`
+      authored as text when `grompp` compiles it from `.mdp` + `.gro` + `.top`. A fabricated
+      `.tpr` cannot work, so this is fatal rather than major.
+
+  # INP.common.declared_counts_match was REMOVED in r26. It declared `decided_by: deterministic`
+  # but carried no `declares`/`counts_card`, so `_count_match` returned "check under-specified"
+  # -> not_evaluated for every application except QE, which overrides it with two of its own.
+  # A not_evaluated verdict falls through to the LLM judge, so in practice an unrunnable
+  # deterministic rule was being decided on vibes — at FATAL severity, 17 times out of 38.
+  #
+  # The property is real and worth checking; it just has to be stated per format, where the
+  # declaration and the card can actually be named. INP.qe.nat_matches_positions and
+  # INP.qe.ntyp_matches_species do that and work. Add the equivalent for another format by
+  # writing it in that format's file, not by re-adding an abstract rule here.
+
+  - id: INP.common.no_truncation
+    claim: "Every file is written out complete — no ellipses, no placeholder paths,
+            no unresolved TODOs"
+    decided_by: deterministic
+    check: {kind: regex_absent, pattern: '\.\.\.$|<\.\.\.>|/path/to/|TODO|FIXME|\[truncated'}
+    dimension: completeness
+    severity: major
+    source: "model"
+
+  - id: INP.common.no_invented_keywords
+    claim: "Uses no keyword that does not EXIST in this application's input language. A
+            keyword that exists but does not appear in the supplied worked example is fine —
+            the example is one deck, not a dictionary. Do not mark violated for a directive
+            being written in a different but valid form, nor for ordering or placement that
+            still parses."
+    decided_by: judge
+    dimension: correctness
+    severity: fatal
+    source: "format:per-application"
+    rationale: >-
+      The largest capability-bound defect class — 48 of 218 defects were genuinely invented
+      syntax, such as `RMAX` and `PMAP` as HPL keys — so the rule earns its place. But it was
+      firing on the opposite case as well.
+
+      Measured: an NWChem answer was marked violated for `memory 512 mb` and `mult 1` because
+      neither "is written in the form shown by the supplied source/example". Both are real
+      NWChem directives. The worked example is a single deck for a different system; it was
+      supplied to teach grammar, not to enumerate the language. Judging against it as though
+      it were exhaustive punishes a model for knowing more than the example shows — which is
+      the capability the subtask is supposed to reward.
+
+      This is the third rule in the library to conflate absence of evidence with evidence of
+      absence, after claims_true_to_catalog (fired on catalog silence) and
+      ranks_match_build_defaults (judged against defaults that did not exist). Any rule
+      phrased "not supported by the supplied material" should be read as suspect.
+
+  - id: INP.common.values_match_physical_system
+    claim: "No parameter value CONTRADICTS what the prompt states about the physical system —
+            a different atom count, a different temperature, the wrong material. Values the
+            prompt leaves open are free: see the 'any value the prompt does not fix' axis.
+            Do not deduct for a cutoff, mesh or timestep merely being unstated in the prompt."
+    decided_by: judge
+    dimension: correctness
+    severity: major
+    source: "prompt"
+    rationale: >-
+      Narrowed to contradiction. The earlier wording, "consistent with the physical system",
+      invited the judge to assess whether every invented value was WELL CHOSEN, which is the
+      same overreach that affected four other rules. A value can only be wrong here if the
+      prompt says otherwise.
+
+
+  # INP.common.not_copied_from_example was REMOVED in r28. It fired on 18 of 40 Input-preparation
+  # rows and roughly three quarters were false positives, because "copied from the example" and
+  # "used the standard value" are indistinguishable from the outside:
+  #     hpl      flagged for reproducing "# Innovative Computing Laboratory, University of
+  #              Tennessee" — which INP.hpl.header_and_output_lines requires, FATALLY. Two rules
+  #              in this library demanded opposite things and no answer could satisfy both.
+  #     lammps   flagged for `neighbor 0.3 bin`, the conventional LAMMPS skin distance
+  #     pytorch  flagged for MASTER_PORT 12355, the DDP tutorial port every example uses
+  #     nekrs    flagged for `timeStepper = tombo2` and `residualTol = 1e-12`, solver defaults
+  # The genuine cases it caught — a GROMACS answer reproducing the example's OPLS block wholesale,
+  # a vLLM answer reusing the example's prompt strings — are contradictions of the stated workload
+  # and are already caught by INP.common.values_match_physical_system, which flagged both.
+  #
+  # The deeper problem is that the rule penalised the very material we chose to supply. We added
+  # worked examples to help; this rule then charged models for following them.
+
+free_choice:
+
+  - axis: "numerical convergence parameters"
+    note: >-
+      Cutoffs, grid densities, k-point counts and similar are free unless the prompt states
+      them. Any value consistent with the stated physical system is correct.
+    source: "model"
+
+  - axis: "file naming"
+    note: "Any filename with the correct extension is acceptable unless the prompt or a
+           prior pipeline stage named it"
+    source: "catalog:required_inputs lists extensions, not names"
+
+  - axis: "comment style and layout"
+    note: "Comments, whitespace and section ordering within a format's rules are free"
+    source: "model"

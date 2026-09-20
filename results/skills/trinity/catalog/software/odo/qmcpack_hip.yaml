@@ -1,0 +1,71 @@
+name: "QMCPACK (HIP)"
+description: "Quantum Monte Carlo ab initio electronic structure code — HIP GPU build for Odo AMD MI250X"
+category: simulation
+version: "v4.2.0"
+
+binary: "/gpfs/wolf2/olcf/csc708/world-shared/hzheng/software/qmcpack_hip/bin/qmcpack"
+install_path: "/gpfs/wolf2/olcf/csc708/world-shared/hzheng/software/qmcpack_hip"
+build_status: built
+
+deps:
+  fftw: "/gpfs/wolf2/olcf/csc708/world-shared/hzheng/software/fftw3"
+  boost: "/gpfs/wolf2/olcf/csc708/world-shared/hzheng/software/boost_full"
+
+modules:
+  - PrgEnv-gnu
+  - rocm
+  - cray-hdf5-parallel
+  - cmake
+
+setup:
+  - "module purge"
+  - "module load PrgEnv-gnu rocm cray-hdf5-parallel"
+  - "export PATH=/gpfs/wolf2/olcf/csc708/world-shared/hzheng/software/qmcpack_hip/bin:$PATH"
+
+gpu_support: true
+gpu_notes: "HIP GPU build for AMD MI250X (gfx90a). Mixed precision enabled (-DQMC_MIXED_PRECISION=1)."
+
+run_command: |
+  srun -N <nodes> --ntasks-per-node 8 qmcpack input.xml
+
+input_files: [".xml"]
+
+keywords: ["quantum Monte Carlo", "QMC", "diffusion Monte Carlo", "DMC", "variational Monte Carlo", "VMC", "electronic structure", "many-body", "HIP", "ROCm", "AMD", "MI250X"]
+aliases: ["qmcpack", "qmc", "qmcpack_hip"]
+
+input_detection:
+  extensions: [".xml"]
+  filenames: []
+  content_markers: ["<simulation", "<qmcsystem", "<wavefunction", "<hamiltonian"]
+
+defaults:
+  nodes: 1
+  walltime: 3600
+  queue: "batch"
+  account: "csc708"
+  ppn: 8
+
+scaling_notes: "Use 1 MPI rank per GCD (8 per node). GPU offload for walker operations."
+
+required_inputs: [".xml"]
+optional_inputs: [".h5", ".wfn"]
+
+output_patterns: ["*.scalar.dat", "*.dmc.dat", "*.stat.h5", "qmc.s*.scalar.dat"]
+
+build_notes: |
+  Built 2026-05-11 via jobs/odo/build_qmcpack_hip/run.sh (v15) on odo-services queue (3m50s).
+  Key fix: ROCm 6.2.4 thrust headers include CUDA-specific sub-headers (cuda/std/*, cub/*, nv/target,
+  thrust::detail::destroy_range) that don't exist on pure AMD systems.
+  Solution: prepend a CPU stub to boost_multi/detail/adl.hpp that:
+    1. Removes all #include <thrust/> lines (CUDA-dependent headers)
+    2. Adds namespace thrust { using namespace ::std; ... } for all algorithms
+    3. Adds namespace thrust::detail { destroy_range() } for allocator operations
+  Modules: PrgEnv-gnu, rocm (6.2.4), cray-hdf5-parallel, cmake
+  CMake flags: -DQMC_GPU=hip -DCMAKE_HIP_ARCHITECTURES=gfx90a -DQMC_MIXED_PRECISION=1
+  FFTW3 and Boost 1.84 bootstrapped from source (no system modules available).
+
+notes: |
+  HIP build for Odo MI250X. Run with 8 MPI ranks per node (one per GCD).
+  The boost_multi/detail/adl.hpp patch is required for ROCm 6.2.4 — file the issue
+  upstream with QMCPACK and boost_multi projects.
+  Build script: jobs/odo/build_qmcpack_hip/run.sh (v15 recipe with thrust stub).

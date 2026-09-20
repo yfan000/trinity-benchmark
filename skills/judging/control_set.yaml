@@ -1,0 +1,96 @@
+# Hand-picked positive controls for judge calibration.
+#
+# A positive control is a real job script that ran. Feeding it to the judge as if a model wrote
+# it must come back clean; anything flagged is a false positive, because reality already
+# settled the question.
+#
+# WHY HAND-PICKED. Two rounds of heuristic selection produced invalid controls that looked
+# like judge failures:
+#
+#   round 1  `csci394_gpu_p1/pbs_run.sh` was labelled alphafold because alphafold.yaml lists
+#            "python" among its keywords. The judge correctly said a CUDA course assignment
+#            does not invoke AlphaFold. 2 of 8 samples were mislabelled this way.
+#   round 2  after tightening the label, `build_qe/run.sh` survived — a post-install
+#            verification wrapper whose only QE call is `$QE_BIN -h`. The judge correctly said
+#            it is not a production job. The build detector missed it because it has no `make`.
+#
+# Both times I reported a judge false positive that was really a bad sample. Heuristics kept
+# admitting scripts where the question put to the judge had no right answer, so selection is
+# explicit and each entry records why it qualifies. 90 PBS scripts invoke a recognised binary;
+# these 7 were read individually.
+#
+# Inclusion criteria, all required:
+#   - carries #PBS directives (a real submission, not a fragment)
+#   - launches the application through a launcher, with real inputs
+#   - is a production or study run, not a build, smoke test, verification wrapper or
+#     course assignment
+#   - the application is unambiguous from the launch line
+#
+# NOT a claim that these are the only good runs — only that these are ones I read and can
+# defend. Add to this list rather than widening a heuristic.
+
+controls:
+
+  - script: si_hse06/run.sh
+    app: qe
+    system: polaris
+    why: "6 #PBS directives; mpiexec -n 4 --ppn 4 --depth=8 launching pw.x then bands.x on an
+          HSE06 silicon band-structure calculation. A complete two-stage production workflow."
+
+  - script: dft_mp-18937.archived_2026-05-13_demo/run.sh
+    app: qe
+    system: polaris
+    why: "7 #PBS directives; SCF then band-path NSCF then bands.x for V2O3 corundum, PBE+U,
+          spin-polarised. The most complete QE workflow in the archive."
+
+  - script: water_qmc_v2/run_h2o.sh
+    app: qmcpack
+    system: polaris
+    why: "6 #PBS directives; the full three-stage chain pw.x -> pw2qmcpack.x -> qmcpack with
+          explicit rank and OpenMP placement. v2 supersedes water_qmc/."
+
+  - script: water_qmc_v2/run_o2.sh
+    app: qmcpack
+    system: polaris
+    why: "Same workflow on O2 — a second molecule under an identical script structure, which
+          is what lets a difference between them read as free choice rather than error."
+
+  - script: ddp_scaling/pbs_cifar10_4gpu.sh
+    app: pytorch
+    system: polaris
+    # Confirmed correct by review 2026-09-15: the rule is right to fire here, so counting it
+    # as a false positive would understate the judge.
+    expected_violations: [BATCH.common.inputs_passed]
+    why: "9 #PBS directives; torchrun --nproc_per_node=4 on train_cifar10_ddp.py. Part of a
+          deliberate 1/2/4/8-GPU scaling study, so the resource request is considered."
+
+  - script: mnist_ddp_scaling/pbs_mn_4gpu_w0.sh
+    app: pytorch
+    system: polaris
+    why: "8 #PBS directives; torchrun --standalone --nproc_per_node=4. A second PyTorch case
+          with a different launch style (standalone vs rendezvous)."
+
+  - script: mfi_serve/run_v8.sh
+    app: vllm
+    system: polaris
+    # Confirmed correct by review 2026-09-15: this script genuinely has no `#PBS -N`, matching
+    # the mined 120/138. Severity minor, so it costs nothing.
+    expected_violations: [BATCH.common.job_name_declared]
+    why: "7 #PBS directives; serves vllm.entrypoints.openai.api_server. v8 is the last of
+          eight revisions, so it is the one that was iterated into working."
+
+# Deliberately excluded, with the reason, so they are not re-admitted by a future heuristic:
+excluded:
+  - {script: "build_*/run.sh", why: "compiles software; no launcher and no inputs by design"}
+  - {script: "build_qe/run.sh", why: "post-install verification wrapper; only calls $QE_BIN -h"}
+  - {script: "csci394_gpu_p*/pbs_run.sh", why: "CUDA course assignment, not a catalog app"}
+  - {script: "06_mpi_01_injection_bw/*", why: "MPI microbenchmark; no catalog application"}
+  - {script: "qmc_water/run.sh", why: "launches python3 analyze.py; post-processing, not the run"}
+  - {script: "serve-*/run.sh", why: "several contain smoke/verify wording; superseded by mfi_serve"}
+  - {script: "verify_vllm_compute/inner.sh", why: "explicitly a verification job"}
+  - script: "water_qmc/run.sh"
+    why: >-
+      superseded by water_qmc_v2. Kept out of the control set but worth revisiting: the judge
+      flagged it for running QMCPack from ${mol}.save against a catalog claim about where
+      pw2qmcpack writes its files. Either the catalog is stale or the judge over-read it, and
+      that is a genuine disagreement for a human rather than a control.

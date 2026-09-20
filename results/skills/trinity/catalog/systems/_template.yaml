@@ -1,0 +1,72 @@
+# System configuration template
+# Copy this file as <system-name>.yaml and fill in the fields.
+# The filename (without .yaml) becomes the system name used in get_backend().
+
+# --- Identity ---
+name: ""                          # Display name (e.g., "Polaris", "Perlmutter")
+facility: ""                      # Facility name (e.g., "ALCF", "NERSC", "OLCF")
+description: ""                   # One-line description
+
+# --- Software build directory ---
+software_build_dir: ""            # Default directory for building/installing software on this system
+                                  # e.g., /eagle/datascience/hzheng/software or /lus/flare/projects/datascience/hzheng/software/aurora
+
+# --- Backend ---
+backend: ""                       # HPCBackend implementation: alcf_iri, alcf_gc, etc.
+
+# --- Compute resource (for IRI-style APIs) ---
+compute:
+  resource_id: ""                 # Compute resource UUID
+  api_base_url: ""                # REST API base URL (e.g., https://api.alcf.anl.gov/api/v1)
+
+# --- Storage resources ---
+storage:
+  # Add one entry per filesystem. Key is a short name (eagle, home, scratch, etc.)
+  # example:
+  #   eagle:
+  #     resource_id: ""           # Storage resource UUID (for IRI filesystem API)
+  #     mount_path: "/eagle"      # Path prefix on compute nodes
+  #     remote_base_path: ""      # User's working directory on this filesystem
+
+# --- Globus endpoints ---
+globus:
+  # Add one entry per filesystem matching the storage keys above.
+  # example:
+  #   eagle:
+  #     endpoint_id: ""           # Globus endpoint UUID
+  #     path_prefix: ""           # Prefix for Globus paths (usually empty for ALCF)
+  compute_endpoint_id: ""         # Globus Compute endpoint UUID (for alcf_gc backend)
+
+# --- Scheduler / queues ---
+scheduler:
+  queues:
+    # Add one entry per queue with resource limits.
+    # example:
+    #   debug:
+    #     max_nodes: 2
+    #     max_walltime: 3600      # seconds
+
+# --- Hardware ---
+hardware:
+  nodes: 0                        # Total nodes in system
+  gpus_per_node: 0
+  gpu_type: ""                    # e.g., "A100", "H100", "Max 1550"
+  cpus_per_node: 0
+
+# --- ClearML ---
+clearml:
+  queues:
+    # Queue name → queue ID mappings for ClearML task submission.
+    # example:
+    #   system-name: ""           # Compute node queue (PBS-backed)
+    #   system-name-login: ""     # Login node queue
+    #   system-name-services: ""  # Services queue (lightweight tasks)
+
+# --- Job defaults ---
+job_defaults:
+  shell: "#!/bin/bash -l"         # Shebang line for job scripts
+  nodes: 1
+  walltime: 600                   # seconds
+  queue: "debug"
+  account: ""                     # Scheduler allocation account
+  ppn: 4                          # MPI ranks per node

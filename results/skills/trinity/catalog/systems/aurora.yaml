@@ -1,0 +1,127 @@
+# ALCF Aurora — 10,624-node Intel GPU exascale supercomputer at Argonne National Laboratory
+
+name: "Aurora"
+facility: "ALCF"
+description: "10,624-node Intel Data Center GPU Max Series exascale supercomputer at Argonne National Laboratory"
+
+software_build_dir: "/lus/flare/projects/datascience/hzheng/software/aurora"
+
+backend: "alcf_iri"
+
+compute:
+  resource_id: "0325fc07-6fb7-4453-b772-3d5030b2df72"
+  api_base_url: "https://api.alcf.anl.gov/api/v1"
+
+storage:
+  eagle:
+    resource_id: "1c3ad9d4-2e91-42bc-becb-72b1fde1235c"
+    mount_path: "/eagle"
+    remote_base_path: "/datascience/hzheng"
+  home:
+    resource_id: "6115bd2c-957a-4543-abff-5fae52992ff2"
+    mount_path: "/home"
+
+globus:
+  eagle:
+    endpoint_id: "05d2c76a-e867-4f67-aa57-76edeb0beda0"
+    path_prefix: ""
+  home:
+    endpoint_id: "51f2b2c4-b4b8-11ee-8811-a52c65340a88"
+    path_prefix: ""
+  flare:
+    endpoint_id: "f39a7a0f-5bfc-46ce-9615-ba9f8592814f"
+    path_prefix: ""
+  compute_endpoint_id:
+    login: "4b74f3ae-befc-43d5-8ba5-abfdfeeb0582"    # aurora-login; Running 2026-05-09
+    compute: "c5577138-5839-40a3-9b8c-be1c02fa099a"  # aurora-compute; Running 2026-05-09
+    user: "0af19c44-09d8-4f72-9d5a-3bbff1728c6b"     # aurora-user; Disconnected 2026-05-09
+
+clearml:
+  queues:
+    aurora: "95dfd7d9eaa54460a7c39958809689a0"
+    aurora-login: "7de911dfa7f14e4fa40a7f4deec5ab45"
+    aurora-services: "f3bea1e7ef9b4386ba01e83d56cd53d5"
+    aurora-services-executor: "284264814a8b467e962f13eb7cbea0eb"
+    aurora-persistent-compute: "f1b81f05cf874ea784d46f84e21aa5ba"
+
+reservations:
+  genesisdemo:
+    resv_id: "R8479494"
+    queue: "R8479494"
+    name: "genesisdemo"
+    owner: "TBD"
+    state: "RESV_CONFIRMED"
+    start: "2026-05-11T08:00:00"
+    end:   "2026-05-16T08:00:00"
+    duration_hours: 120
+    nodes: 0
+    ncpus: 0
+    ngpus: 0
+    account: "datascience"
+    notes: "Aurora genesisdemo reservation. Use queue=R8479494 in qsub. Refresh owner/state/start/end/nodes via `qstat -Q -f R8479494` on an Aurora login node."
+
+scheduler:
+  # Source: docs.alcf.anl.gov/aurora/running-jobs-aurora/ (2026-05-09)
+  # prod is a ROUTING queue → routes to small/medium/large based on node count
+  # datascience account: debug/debug-scaling confirmed; capacity confirmed (small cluster jobs)
+  # small/medium/large: access denied for datascience (rc=174) — requires INCITE/ALCC allocation
+  # lustre_scaling: exists but disabled (Ena=no)
+  # demand: does NOT exist on Aurora
+  queues:
+    debug:
+      min_nodes: 1
+      max_nodes: 2           # 64 non-exclusive nodes shared among debug users
+      min_walltime: 300
+      max_walltime: 3600
+      max_jobs_per_user: 1
+      notes: "1 job/user limit (running+accruing+queued). Do NOT use select=1:system=aurora — invalid on Aurora PBS."
+    debug-scaling:
+      min_nodes: 2
+      max_nodes: 256
+      min_walltime: 300
+      max_walltime: 3600
+      max_jobs_per_user: 1
+      notes: "datascience account confirmed. 1 job/user limit."
+    prod:
+      min_nodes: 256         # MINIMUM 256 nodes required; smaller jobs will be rejected
+      max_nodes: 10624
+      min_walltime: 300
+      max_walltime: 86400
+      routing: true          # routes to small (256-1024, 12h), medium (1025-1919, 18h), large (1920-10624, 24h)
+      per_project_running_limit: 10
+      per_project_queued_limit: 100
+      notes: "datascience denied on small/medium/large; requires INCITE/ALCC/DD allocation."
+    capacity:
+      min_nodes: 1
+      max_nodes: 16
+      min_walltime: 300
+      max_walltime: 604800   # 7 days
+      max_total_nodes_across_jobs: 128
+      max_jobs_per_project: 5
+      notes: "Added Feb 2026. Good for small jobs that don't need prod. datascience account accessible."
+    visualization:
+      min_nodes: 1
+      max_nodes: 32
+      min_walltime: 300
+      max_walltime: 28800    # 8 hours
+      notes: "By request only; non-exclusive nodes."
+    lustre_scaling:
+      notes: "Exists but DISABLED (Ena=no). Do not use."
+
+hardware:
+  nodes: 10624
+  gpus_per_node: 6
+  gpu_type: "Intel Data Center GPU Max Series"
+  cpus_per_node: 104
+  cpu_type: "Intel Xeon CPU Max Series (Sapphire Rapids)"
+  memory_per_node_gb: 512
+
+job_defaults:
+  shell: "#!/bin/bash -l"
+  nodes: 1
+  walltime: 600
+  queue: "debug"
+  account: "datascience"
+  ppn: 6
+  custom_attributes:
+    filesystems: "home:flare"

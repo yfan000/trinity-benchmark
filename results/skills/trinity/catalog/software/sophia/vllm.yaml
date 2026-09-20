@@ -1,0 +1,47 @@
+name: "vLLM"
+description: "High-throughput LLM inference server with PagedAttention on Sophia A100 nodes"
+category: ml-framework
+version: "latest"
+build_status: built
+
+binary: "/eagle/datascience/hzheng/software/sophia/vllm_venv_v2/bin/python"
+install_path: "/eagle/datascience/hzheng/software/sophia/vllm_venv_v2"
+
+modules:
+  - conda
+
+setup:
+  - "module load conda"
+  - "conda activate"
+  - "source /eagle/datascience/hzheng/software/sophia/vllm_venv_v2/bin/activate"
+
+gpu_support: true
+gpu_notes: "CUDA A100 GPUs. PagedAttention for high-throughput serving. Tensor parallelism via NCCL."
+
+run_command: |
+  python -m vllm.entrypoints.openai.api_server \
+    --model <model_path> \
+    --tensor-parallel-size 8 \
+    --host 0.0.0.0 \
+    --port 8000
+
+input_files: [".json", ".yaml", "*.safetensors", "*.bin"]
+
+keywords: ["LLM inference", "large language model", "serving", "vLLM", "PagedAttention", "tensor parallelism", "OpenAI API", "A100", "inference server"]
+aliases: ["vllm", "vllm-server", "llm-server"]
+
+defaults:
+  nodes: 1
+  walltime: 3600
+  queue: "by-gpu"
+  ppn: 8
+
+required_inputs: ["config.json", "tokenizer_config.json"]
+optional_inputs: ["*.safetensors", "*.bin"]
+output_patterns: ["vllm.log", "server.log"]
+
+notes: |
+  vllm_venv_v2 on Sophia Eagle. Contains: vllm, flashinfer, torchrun, openai client.
+  Sophia module deps broken — use conda venv approach.
+  See knowledgebase/hpc/lessons/sirius_vllm.md for vLLM deployment patterns.
+  Build script: jobs/sophia/build_vllm/run.sh

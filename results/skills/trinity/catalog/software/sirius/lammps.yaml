@@ -1,0 +1,64 @@
+name: "LAMMPS"
+description: "Large-scale Atomic/Molecular Massively Parallel Simulator for classical MD with GPU acceleration via Kokkos"
+category: simulation
+version: "stable"
+
+binary: "/lus/tegu/projects/PolarisAT/hzheng/software/lammps/bin/lmp"
+install_path: "/lus/tegu/projects/PolarisAT/hzheng/software/lammps"
+
+modules:
+  - PrgEnv-gnu
+  - cray-mpich
+  - cudatoolkit-standalone
+
+setup:
+  - "module load PrgEnv-gnu"
+  - "module load cray-mpich"
+  - "module load cudatoolkit-standalone"
+  - "export PATH=/lus/tegu/projects/PolarisAT/hzheng/software/lammps/bin:$PATH"
+
+build_status: needs_build
+
+gpu_support: true
+gpu_notes: "GPU acceleration via Kokkos backend targeting NVIDIA A100 (SM_80). Use -k on g <N> -sf kk -pk kokkos to enable."
+
+run_command: |
+  mpiexec -n 8 --ppn 8 lmp -in input.lammps -k on g 8 -sf kk -pk kokkos
+
+input_files: [".lammps", ".in", ".data"]
+
+keywords: ["molecular dynamics", "MD", "classical MD", "force field", "LAMMPS", "Kokkos", "GPU MD", "interatomic potential", "NVT", "NPT", "Lennard-Jones"]
+aliases: ["lammps", "lmp", "lmp_kokkos", "lmp_gpu"]
+
+input_detection:
+  extensions: [".lammps", ".in", ".data", ".lmp"]
+  filenames: ["in.lammps", "input.lammps"]
+  content_markers: ["units", "atom_style", "pair_style", "timestep", "run", "fix nvt", "fix npt"]
+
+defaults:
+  nodes: 1
+  walltime: 1800
+  queue: "debug"
+  ppn: 8
+
+scaling_notes: |
+  One MPI rank per GPU is recommended for Kokkos GPU runs. Each A100 node has 8 GPUs.
+  Use -k on g 8 -sf kk to route all LAMMPS styles through Kokkos.
+  For CPU-only runs, set ppn to number of physical cores.
+  Multi-node: increase -n and --ppn proportionally; adjust -k on g 8 per node.
+
+required_inputs: [".lammps", ".in"]
+optional_inputs: [".data", "*.UFF", "potential.*"]
+
+output_patterns: ["log.lammps", "dump.*.lammpstrj", "*.restart", "*.thermo"]
+
+notes: |
+  Build with CMake + Kokkos backend targeting CUDA SM_80 (A100).
+  Recommended CMake flags:
+    -D PKG_KOKKOS=yes
+    -D Kokkos_ENABLE_CUDA=yes
+    -D Kokkos_ARCH_AMPERE80=yes
+    -D CMAKE_CXX_COMPILER=<kokkos_nvcc_wrapper>
+  Load cudatoolkit-standalone before building so nvcc is on PATH.
+  MPI: use cray-mpich for Cray-optimized MPI transport.
+  GPU count: Sirius nodes have 8 x NVIDIA A100 (80 GB).

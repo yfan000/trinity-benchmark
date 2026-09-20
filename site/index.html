@@ -1,0 +1,82 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Trinity Benchmark v8</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+:root{--ink:#14181d;--paper:#f6f7f8;--surface:#fff;--muted:#5d6673;--rule:#dfe3e8;
+ --accent:#0f6f6c;--accent-soft:#e3f1f0;--accent-ink:#0a4f4d;
+ --sans:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;--mono:"IBM Plex Mono",ui-monospace,Menlo,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ink:#e6eaef;--paper:#101418;
+ --surface:#171c22;--muted:#95a1b0;--rule:#2a323b;--accent:#4fd1c9;--accent-soft:#12312f;--accent-ink:#8ae5de}}
+:root[data-theme="dark"]{--ink:#e6eaef;--paper:#101418;--surface:#171c22;--muted:#95a1b0;
+ --rule:#2a323b;--accent:#4fd1c9;--accent-soft:#12312f;--accent-ink:#8ae5de}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;
+ line-height:1.55;-webkit-font-smoothing:antialiased;display:flex;justify-content:center;padding:44px 20px 80px}
+.page{width:100%;max-width:760px}
+.kicker{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:600}
+h1{font-size:26px;margin:6px 0 8px;letter-spacing:-.015em;text-wrap:balance}
+.sub{color:var(--muted);max-width:60ch;margin:0 0 6px}
+.meta{font-family:var(--mono);font-size:12px;color:var(--muted);border-top:1px solid var(--rule);
+ padding-top:10px;margin-top:18px}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);
+ margin:34px 0 12px;font-weight:600}
+.grid{display:grid;gap:10px}
+a.card{display:block;background:var(--surface);border:1px solid var(--rule);border-radius:6px;
+ padding:15px 17px;text-decoration:none;color:inherit;border-left:3px solid var(--rule)}
+a.card:hover{border-left-color:var(--accent);background:var(--accent-soft)}
+a.card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+a.card b{display:block;font-size:15px;margin-bottom:3px}
+a.card span{color:var(--muted);font-size:13.5px}
+a.card code{font-family:var(--mono);font-size:11.5px;color:var(--muted);display:block;margin-top:7px}
+table{width:100%;border-collapse:collapse;margin-top:6px;font-variant-numeric:tabular-nums}
+th{font-size:11.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);
+ text-align:right;padding:0 8px 7px;font-weight:600}
+th:first-child{text-align:left}
+td{text-align:right;padding:7px 8px;border-top:1px solid var(--rule);font-family:var(--mono);font-size:13.5px}
+td:first-child{text-align:left}
+tr.tot td{border-top:2px solid var(--ink);font-weight:600}
+td.low{color:var(--accent);font-weight:600}
+</style>
+<div class="page">
+  <div class="kicker">Trinity agent benchmark</div>
+  <h1>Can a cheaper model be trusted with HPC job preparation?</h1>
+  <p class="sub">Four open-weight models across the four pre-submission stages, judged on a
+  versioned requirement library. Everything below is generated from corpus v8.</p>
+
+  <h2>Result</h2>
+  <table>
+    <tr><th>Model</th><th>Software</th><th>Input prep</th><th>Resource</th><th>Batch</th><th>Total</th></tr>
+    <tr><td>nemotron-3-ultra</td><td>16</td><td class="low">7</td><td>18</td><td>20</td><td>61/80 · 76%</td></tr>
+    <tr><td>gemma-4-31b</td><td>16</td><td class="low">6</td><td>19</td><td>16</td><td>57/80 · 71%</td></tr>
+    <tr><td>gpt-oss-120b</td><td>10</td><td class="low">4</td><td>19</td><td>17</td><td>50/80 · 62%</td></tr>
+    <tr><td>llama-3.1-8b</td><td>18</td><td class="low">0</td><td>6</td><td>11</td><td>35/80 · 44%</td></tr>
+    <tr class="tot"><td>All models</td><td>60/80</td><td class="low">17/80</td><td>62/80</td><td>64/80</td><td>203/320 · 63%</td></tr>
+  </table>
+
+  <h2>Report</h2>
+  <div class="grid">
+    <a class="card" href="trinity_benchmark_report.pdf"><b>Benchmark report (PDF, 4pp)</b>
+      <span>The table above, per-model failure patterns split by subtask with judge evidence,
+      and what the numbers survived.</span><code>trinity_benchmark_report.pdf</code></a>
+  </div>
+
+  <h2>Browse the evidence</h2>
+  <div class="grid">
+    <a class="card" href="trinity_failures_v8.html"><b>Failure browser</b>
+      <span>Pick a rule and a model to see every answer that failed it — all three replicates'
+      evidence, the judge's overall comment, and the prompt, reference and answer
+      behind each.</span><code>trinity_failures_v8.html</code></a>
+    <a class="card" href="trinity_traces_v8.html"><b>Answer traces</b>
+      <span>All 320 graded answers with per-requirement verdicts. Filter by arm, failures only,
+      or replicate instability.</span><code>trinity_traces_v8.html</code></a>
+    <a class="card" href="trinity_rules_v8.html"><b>Grading rules</b>
+      <span>Every requirement applied to each sample: what decides it, where it came from, and
+      the source YAML behind it.</span><code>trinity_rules_v8.html</code></a>
+    <a class="card" href="trinity_arm_inspector_v8.html"><b>Prompt A/B inspector</b>
+      <span>Both prompt arms per anchor with the catalog-enrichment diff
+      highlighted.</span><code>trinity_arm_inspector_v8.html</code></a>
+  </div>
+
+  <p class="meta">corpus v8 · rubric r28 · judge gpt56terra (Argo) at k=3 · 2026-09-20</p>
+</div>

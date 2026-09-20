@@ -1,0 +1,18 @@
+app: vllm
+system: polaris
+version: "0.11.2 (torch 2.9.0+cu128)"
+benchmark:
+  name: "Llama-3.1-8B offline inference, 50 prompts, max_tokens=50, TP=4"
+  nodes: 1
+  gpus_per_node: 4
+  mpi_ranks: 1
+  walltime_s: 12
+  throughput: 2514.4
+  throughput_unit: "tokens/s"
+  date: "2026-05-11"
+  job_script: "jobs/polaris/smoke_tests_genesis/vllm/run_v2.sh"
+notes: |
+  vLLM 0.11.2, tensor_parallel_size=4, bfloat16, max_model_len=2048.
+  Model: /eagle/datascience/hzheng/models/llama3-8b-instruct
+  GOTCHA: use full venv path — conda overrides PATH after source activate in login shell.
+  Binary: /eagle/datascience/hzheng/software/polaris/vllm/vllm-env/bin/python

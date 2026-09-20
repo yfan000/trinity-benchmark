@@ -1,0 +1,26 @@
+name: "PySCF"
+description: "Python-based Simulations of Chemistry Framework (CPU-only; gpu4pyscf requires CUDA)"
+category: "quantum-chemistry"
+version: "latest"
+
+install_path: "/lustre/orion/csc708/scratch/hzheng/software/frontier/pyscf"
+venv: "/lustre/orion/csc708/scratch/hzheng/software/frontier/pyscf/venv"
+activate: "source /lustre/orion/csc708/scratch/hzheng/software/frontier/pyscf/venv/bin/activate"
+
+gpu_support: false
+gpu_notes: "Frontier uses AMD MI250X; gpu4pyscf is CUDA-only and not available here."
+
+modules:
+  - miniforge3
+
+setup:
+  - "module load miniforge3"
+  - "source /lustre/orion/csc708/scratch/hzheng/software/frontier/pyscf/venv/bin/activate"
+
+keywords: ["quantum chemistry", "DFT", "HF", "BFD", "ccECP", "QMC", "trial wavefunction"]
+aliases: ["pyscf"]
+
+notes: >
+  CPU-only install (pyscf + h5py). Frontier uses AMD MI250X; gpu4pyscf is CUDA-only.
+  For QMC trial wavefunctions: use BFD or ccECP via mol.ecp='bfd' / mol.basis='bfd-vtz'.
+  ClearML task: d92476d22d1f414c83a1aac1be0940f4 (install_pyscf_cpu, frontier-services)

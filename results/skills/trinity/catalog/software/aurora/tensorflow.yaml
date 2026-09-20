@@ -1,0 +1,45 @@
+name: "TensorFlow (Intel Extension)"
+description: "TensorFlow with Intel Extension for TensorFlow (itex) for XPU acceleration on Aurora"
+category: ml-framework
+version: "2.15"
+build_status: built
+
+binary: "/lus/flare/projects/datascience/hzheng/software/aurora/tensorflow_venv_v2/bin/python"
+install_path: "/lus/flare/projects/datascience/hzheng/software/aurora/tensorflow_venv_v2"
+conda_env: "/lus/flare/projects/datascience/hzheng/software/aurora/tensorflow-xpu/conda_env"
+
+modules:
+  - oneapi/release
+  - intel_compute_runtime
+
+setup:
+  - "module use /soft/modulefiles"
+  - "module load oneapi/release"
+  - "module load intel_compute_runtime"
+  - "unset PYTHONPATH"
+  - "CONDA_BIN=/opt/aurora/26.26.0/spack/unified/1.1.1/install/linux-x86_64/miniforge3-25.11.0-1-khkcc6i/bin/conda"
+  - "eval \"$(${CONDA_BIN} shell.bash hook)\""
+  - "conda activate /lus/flare/projects/datascience/hzheng/software/aurora/tensorflow-xpu/conda_env"
+
+gpu_support: true
+gpu_notes: "Intel Data Center GPU Max Series via Intel Extension for TensorFlow (intel_extension_for_pytorch=itex)"
+
+run_command: |
+  python train.py  # TF auto-detects XPU via itex
+
+defaults:
+  nodes: 1
+  walltime: 3600
+  queue: "debug"
+  ppn: 6
+
+scaling_notes: "Intel Extension for TensorFlow enables XPU acceleration transparently."
+
+keywords: ["TensorFlow", "deep learning", "machine learning", "neural network", "XPU", "Intel GPU"]
+aliases: ["tensorflow", "tf", "itex"]
+
+notes: |
+  Installed via: pip install tensorflow==2.15 intel-extension-for-tensorflow[xpu]
+  Requires oneAPI + intel_compute_runtime loaded.
+  Conda env uses Python 3.10 (itex constraint).
+  Build script: jobs/aurora/build_tensorflow/run.sh

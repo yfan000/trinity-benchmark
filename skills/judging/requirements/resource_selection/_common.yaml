@@ -1,0 +1,224 @@
+# Resource selection — sizing the allocation.
+#
+# This is the subtask where the judge disagrees with ITSELF most: re-judging the same frozen
+# answers three times flipped the verdict on 21% of Resource-selection rows, against 3-5% for
+# every other subtask (skills/judge_retest.py on corpus v6). The reason is visible in the old
+# grading note — "there is no single correct allocation" gives the judge latitude, and latitude
+# under sampling becomes variance.
+#
+# The fix is structural, not a better prompt: move every decidable requirement into Python.
+# Queue legality is pure arithmetic against the catalog's own queue table, and
+# skills/trinity_queue_audit.py already implements it — it found 5 illegal requests in v2 that
+# the judge had also caught, and did so deterministically.
+
+requirements:
+
+  # ---- legality: arithmetic, not judgement ---------------------------------------------
+  - id: RES.common.queue_exists
+    claim: "The chosen queue exists on that system, or is a reservation ID"
+    decided_by: deterministic
+    check: {kind: queue_exists}
+    dimension: correctness
+    severity: fatal
+    source: "catalog:systems/<system>.yaml#scheduler.queues + run:24/138"
+    rationale: >-
+      Reservation IDs are legitimate queue names — `-q R7143698` appears in 24 real scripts
+      across three applications, and `R7156017` in another. A check that only consulted the
+      catalog's queue table would fail every one of them. Accept `^R\d+$` as valid.
+
+  - id: RES.common.no_reservation_queue
+    claim: "Targets a standard queue, not a reservation ID"
+    decided_by: deterministic
+    check: {kind: no_reservation}
+    dimension: correctness
+    severity: major
+    source: "project decision 2026-09-15"
+    rationale: >-
+      A reservation such as `R7143698` is a temporary allocation tied to one project and one
+      window, so a freshly generated script must not target one even though the scheduler
+      accepts it. Note this is why real archived runs are imperfect positive controls for
+      queue choice: 24 of them DO use reservations, correctly for their moment, and
+      judge_calibrate exempts this requirement for that reason.
+
+  - id: RES.common.nodes_within_queue_limits
+    claim: "The node count is within the chosen queue's min and max"
+    decided_by: deterministic
+    check: {kind: queue_limit, field: nodes}
+    dimension: correctness
+    severity: fatal
+    source: "catalog:systems/<system>.yaml#scheduler.queues"
+    rationale: "measured: 3 illegal node counts in v2, e.g. 128 nodes on crux `demand` (max 64)"
+
+  - id: RES.common.walltime_within_queue_limit
+    claim: "The requested walltime does not exceed the chosen queue's maximum"
+    decided_by: deterministic
+    check: {kind: queue_limit, field: walltime}
+    dimension: correctness
+    severity: fatal
+    source: "catalog:systems/<system>.yaml#scheduler.queues"
+    rationale: >-
+      The defect that prompted this rewrite. Measured in v2: 36h requested in a 24h `prod`
+      queue, and 19h12 in a 2h `g1` queue. Both models named a queue and then asked for more
+      time than it allows. Arithmetic settles it; no judgement needed.
+
+  - id: RES.common.ranks_match_build_defaults
+    claim: "Ranks-per-node and GPUs-per-rank follow the application's build defaults —
+            only the node count is the agent's to choose"
+    decided_by: deterministic
+    check: {kind: numeric_match, field: "defaults.ppn"}
+    dimension: correctness
+    severity: major
+    source: "catalog:software/<system>/<app>.yaml#defaults"
+    rationale: "measured defect: 16 ranks/node for nekRS, which requires 1 rank per GPU (4)"
+
+  - id: RES.common.rank_layout_plausible
+    claim: "Where the catalog records no build default, the rank and GPU layout is still
+            plausible for the hardware STATED IN THE PROMPT — not more ranks per node than
+            there are cores, not more GPUs per node than the machine has. Judge against the
+            hardware, never against a default that does not exist."
+    decided_by: judge
+    dimension: correctness
+    severity: major
+    source: "prompt:machine specification"
+    rationale: >-
+      Fills the hole r10 opened. r10 correctly stopped the judge inventing build defaults for
+      the 57 of 144 catalog entries that record none, but it dropped the question entirely —
+      6 of 47 missed violations sit here. The hardware IS supplied, so plausibility remains
+      checkable even when the default is not.
+
+  - id: RES.common.rank_arithmetic_consistent
+    claim: "nodes x ranks-per-node equals the stated total ranks, and the accelerator count
+            follows from the per-rank ratio"
+    decided_by: deterministic
+    check: {kind: arithmetic}
+    dimension: correctness
+    severity: major
+    source: "format:arithmetic"
+    rationale: >-
+      measured defects: "16 ranks over 4 GPUs is 2 ranks per GPU" (it is 4);
+      "8 GPUs per node (2 nodes x 4 GPUs per node)" (8 is the total, 4 is per node)
+
+  # ---- the residual that genuinely needs reading ---------------------------------------
+  - id: RES.common.no_fabricated_evidence
+    claim: "Does not claim a number was OBSERVED, MEASURED or REPORTED when the prompt
+            supplies no such figure. Fire ONLY on explicit evidence language — 'observed',
+            'measured', 'the benchmark showed', 'the prior run took', 'as reported'. Hedged
+            estimates are NOT violations: 'typically finishes in about an hour', 'normally
+            well under', 'roughly 5 minutes' are guesses stated as guesses, and the prompts
+            supply no rate, so guessing is the only way to answer. If in doubt, satisfied."
+    decided_by: judge
+    dimension: correctness
+    severity: major
+    source: "model"
+    rationale: >-
+      MEASURED after r6: of 17 firings in v7, only 2 were the intended case — a figure called
+      an "observed < 5 min baseline". The other 15 flagged hedged estimates such as "normally
+      finishes well under one hour". So r6 did not work: rewriting the claim and trusting the
+      judge to honour the distinction repeated the claims_true_to_catalog failure, where the
+      rule's general sense overrode its wording. r23 names the trigger words instead of
+      describing the concept, and says explicitly what is NOT a violation.
+
+      The earlier wording — "cites no timing, throughput or scaling figure not present in the
+      prompt" — was unsatisfiable alongside the task itself. The prompts give problem SIZE but
+      never a RATE, so ANY walltime implies a rate the model supplied. Under the old rule a
+      model that answered at all was in violation, and one that wrote "assuming ~5 min/epoch
+      with a 20% margin" was marked down for being explicit about its reasoning. A safety
+      margin is not even a cited figure; it is a stated choice.
+
+      The two defects that motivated the rule were both fabricated EVIDENCE, not assumptions:
+      "the collaborator's 2-node job completed well within an hour" (no such run was
+      mentioned) and a LAMMPS scaling table presented as known behaviour. Neither said
+      "assuming". So the rule now targets asserting-as-fact, and pairs with
+      the prompt, which now simply asks that assumptions and margins be stated plainly
+      rather than sorted into a DERIVED/ASSUMED taxonomy whose DERIVED branch was unreachable.
+
+  # RES.common.walltime_basis_honest was REMOVED in r25.
+  #
+  # 8 of its 9 firings on v7 were a model labelling a guess "DERIVED" rather than "ASSUMED" —
+  # and that vocabulary was ours. The prompt instructed models to "label every walltime
+  # estimate as either DERIVED (showing the arithmetic from quantities stated in the prompt)
+  # or ASSUMED", while supplying problem size and no rate, so DERIVED was unreachable. We
+  # invented a two-way label, made one branch impossible, told models to choose, then
+  # penalised the wrong choice. The prompt instruction has been removed too.
+  #
+  # The legitimate residue — not claiming a number was measured — is covered by
+  # RES.common.no_fabricated_evidence, which r23 narrowed to explicit evidence language. The
+  # one substantive firing here (GROMACS treating simulation femtoseconds as elapsed seconds
+  # to reach "138.9 hours") is an arithmetic error belonging to sizing_not_absurd.
+
+  - id: RES.common.allocation_matches_scaling_notes
+    claim: "The ALLOCATION does not contradict the scaling guidance supplied with the
+            application. Judge the numbers chosen, not whether the answer discusses the
+            guidance: silently following it is fully correct. Fire only when the chosen
+            layout conflicts with it — for example keeping 8 ranks on a 4-GPU node when the
+            guidance says one rank per GPU. Not mentioning the guidance is NOT a violation,
+            and neither is omitting advice that does not bear on the allocation."
+    decided_by: judge
+    dimension: correctness
+    severity: minor
+    source: "catalog:software/<system>/<app>.yaml#scaling_notes"
+    rationale: >-
+      MEASURED on v7: 14 firings, and the first reads "The answer FOLLOWS the 1-rank-per-GPU
+      and scale-by-node-count guidance, but OMITS the supplied..." — marked violated for not
+      narrating compliance it had achieved. The old wording, "honours the guidance OR SAYS WHY
+      it does not apply", reads as a requirement to discuss, so a correct silent answer fails.
+
+      Two further firings were on PyTorch, which has no scaling_notes at all; v7's new
+      build-defaults block also carries gpu_notes, and the judge treated that as scaling
+      guidance the answer had ignored. Restricting the rule to the allocation removes that too.
+
+      The genuine catch, preserved: GROMACS keeping 8 ranks on a 4-GPU node while mapping only
+      `-gpu_id 0123`. That is the allocation contradicting the guidance.
+
+      Also moved from completeness to correctness: a layout that fights the build's guidance is
+      a wrong allocation, not a missing section.
+
+  - id: RES.common.sizing_not_absurd
+    claim: "The allocation is not absurd for the problem described. DEFAULT TO SATISFIED.
+            Mark violated only when the choice defies common sense — hundreds of nodes for a
+            two-atom molecule, a single node and half an hour for a 500,000-atom production
+            run, more ranks than there is work to divide. Do NOT mark violated because a
+            different size would have been better, or because the choice is not optimal."
+    decided_by: judge
+    dimension: correctness
+    severity: major
+    source: "model"
+    rationale: >-
+      The prompts supply problem size but no performance data, so there is no way to compute
+      the right allocation and any legal choice is defensible. Renamed from
+      "sizing_defensible", which invited the judge to look for a best answer that does not
+      exist and to deduct for anything short of it.
+
+      Hard constraints are NOT this rule's job — they are already decided in code by
+      nodes_within_queue_limits, walltime_within_queue_limit, ranks_match_build_defaults and
+      rank_arithmetic_consistent, none of which can be swayed by sampling. What is left for
+      the judge is the one thing code cannot see: whether the shape of the request makes sense
+      for the science described. That bar is low on purpose.
+
+free_choice:
+
+  - axis: "node count"
+    note: >-
+      There is no single correct allocation. Any node count that is legal for the chosen
+      queue and consistent with the build's rank ratio is acceptable. Do NOT treat the
+      catalog's `defaults` as the expected answer.
+    source: "catalog:defaults is a one-node functional smoke test"
+    rationale: >-
+      176 of 234 baseline answers carried a defect citing the defaults; a model that sized
+      correctly for a 500,000-atom run was marked down for not matching a smoke test.
+
+  - axis: "queue choice"
+    note: >-
+      Any STANDARD queue whose limits admit the request is acceptable — debug, debug-scaling,
+      prod, preemptable and demand are all defensible choices. Reservations are excluded by
+      RES.common.no_reservation_queue; they are legal but not something a generated script
+      should pick.
+    source: "run: debug, prod and preemptable all used across successful runs"
+
+  - axis: "walltime margin"
+    note: "Any stated safety margin is acceptable; the figure need not be minimal"
+    source: "run: 00:10:00 to 06:00:00 across successful runs of the same applications"
+    rationale: >-
+      Observed walltimes for the same application span an order of magnitude — alphafold runs
+      at 00:10:00, 00:30:00, 01:00:00 and 04:00:00 all completed. Judging tightness would be
+      judging taste.

@@ -1,0 +1,68 @@
+name: "GROMACS"
+description: "High-performance molecular dynamics package for biomolecular simulations with CUDA GPU offload"
+category: simulation
+version: "2024"
+
+binary: "/lus/tegu/projects/PolarisAT/hzheng/software/gromacs/bin/gmx_mpi"
+install_path: "/lus/tegu/projects/PolarisAT/hzheng/software/gromacs"
+
+modules:
+  - PrgEnv-gnu
+  - cray-mpich
+  - cray-fftw
+  - cudatoolkit-standalone
+
+setup:
+  - "module load PrgEnv-gnu"
+  - "module load cray-mpich"
+  - "module load cray-fftw"
+  - "module load cudatoolkit-standalone"
+  - "export PATH=/lus/tegu/projects/PolarisAT/hzheng/software/gromacs/bin:$PATH"
+
+build_status: needs_build
+
+gpu_support: true
+gpu_notes: "CUDA GPU offload for non-bonded, PME, and update kernels on A100. Pass -gpu_id to map MPI ranks to GPUs."
+
+run_command: |
+  mpiexec -n 8 --ppn 8 gmx_mpi mdrun -v -deffnm md -gpu_id 01234567 -ntmpi 8
+
+input_files: [".tpr", ".mdp", ".gro", ".top"]
+
+keywords: ["molecular dynamics", "MD", "biomolecular simulation", "GROMACS", "protein", "lipid bilayer", "CUDA GPU", "PME", "free energy", "REMD"]
+aliases: ["gromacs", "gmx", "gmx_mpi", "mdrun"]
+
+input_detection:
+  extensions: [".tpr", ".mdp", ".gro", ".top", ".itp"]
+  filenames: ["topol.top", "md.mdp", "conf.gro"]
+  content_markers: ["integrator", "nsteps", "coulombtype", "vdwtype", "[ system ]", "[ molecules ]"]
+
+defaults:
+  nodes: 1
+  walltime: 1800
+  queue: "debug"
+  ppn: 8
+
+scaling_notes: |
+  One MPI rank per GPU is recommended (-ntmpi 8 for 8 GPUs per node).
+  -gpu_id 01234567 maps ranks 0-7 to GPUs 0-7.
+  For CPU-only PME: use -pme cpu -npme 1 with fewer GPU ranks.
+  Multi-node: combine with thread-MPI or standard MPI; set -ntomp for OpenMP threading.
+
+required_inputs: [".tpr"]
+optional_inputs: [".mdp", ".gro", ".top", ".itp", ".ndx"]
+
+output_patterns: ["md.log", "md.edr", "md.xtc", "md.trr", "md.gro", "*.cpt"]
+
+notes: |
+  Build with CMake + CUDA support targeting SM_80 (A100).
+  Recommended CMake flags:
+    -D GMX_MPI=ON
+    -D GMX_GPU=CUDA
+    -D GMX_CUDA_TARGET_SM=80
+    -D FFTW3_LIBRARIES=<cray-fftw path>
+    -D CMAKE_C_COMPILER=gcc
+    -D CMAKE_CXX_COMPILER=g++
+  Link against cray-fftw for optimized FFTs on Cray interconnect nodes.
+  Sirius nodes have 8 x NVIDIA A100 (80 GB each).
+  Use grompp to prepare the .tpr file before mdrun.

@@ -1,0 +1,50 @@
+name: "VASP"
+description: "Vienna Ab initio Simulation Package for DFT electronic structure (license required)"
+category: dft
+version: "6.x"
+
+binary: "vasp_std"
+install_path: ""   # centrally installed; check: which vasp_std after module load
+
+modules:
+  - vasp   # check: module avail vasp
+
+setup:
+  - "module reset"
+  - "module load vasp"   # verify: module avail vasp
+
+gpu_support: true
+gpu_notes: "GPU version via vasp_gpu or OpenACC build (VASP 6.x)"
+
+run_command: |
+  srun -n 4 -G 4 --gpu-bind=single:1 vasp_std
+
+input_files: ["INCAR", "POSCAR", "KPOINTS", "POTCAR"]
+
+# --- Auto-detection ---
+keywords: ["DFT", "density functional theory", "plane wave", "VASP", "electronic structure", "ab initio"]
+aliases: ["vasp", "vasp_std", "vasp_gam", "vasp_ncl"]
+
+input_detection:
+  extensions: []
+  filenames: ["INCAR", "POSCAR", "KPOINTS", "POTCAR"]
+  content_markers: ["SYSTEM", "ISTART", "NSW", "ENCUT"]
+
+# --- Smart defaults ---
+defaults:
+  nodes: 1
+  walltime: 3600
+  queue: "debug"
+  constraint: "gpu"
+  account: "dasrepo"
+
+scaling_notes: "4 MPI ranks per node (1 per GPU). Use NCORE/NPAR in INCAR for parallelism."
+
+# --- Input validation ---
+required_inputs: ["INCAR", "POSCAR", "KPOINTS", "POTCAR"]
+optional_inputs: ["CHGCAR", "WAVECAR"]
+
+# --- Output retrieval ---
+output_patterns: ["OUTCAR", "CONTCAR", "DOSCAR", "vasprun.xml", "CHGCAR"]
+
+notes: "License required. Verify availability with 'module avail vasp'. GPU build available in VASP 6.x."

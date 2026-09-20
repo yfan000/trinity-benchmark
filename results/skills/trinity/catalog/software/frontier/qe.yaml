@@ -1,0 +1,18 @@
+app: qe
+version: "7.4"
+system: frontier
+status: installed
+binary: /ccs/proj/csc708/hzheng/software/frontier/qe/bin/pw.x
+install_prefix: /ccs/proj/csc708/hzheng/software/frontier/qe
+built_date: "2026-05-09"
+
+modules:
+  - PrgEnv-gnu
+
+compilers:
+  CC: cc
+  FC: ftn
+
+notes: |
+  Rebuilt 2026-05-09 to /ccs/proj/ (permanent storage). cmake build with Cray wrappers
+  cc/CC/ftn + cray-libsci + cray-fftw. Task dbc55884.

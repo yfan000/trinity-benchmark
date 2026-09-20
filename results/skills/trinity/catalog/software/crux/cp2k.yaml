@@ -1,0 +1,49 @@
+name: "CP2K"
+description: "CP2K quantum chemistry and condensed matter physics package (CPU-only build)"
+category: dft
+version: ""
+
+binary: "/eagle/datascience/hzheng/software/crux/cp2k/bin/cp2k.popt"
+install_path: "/eagle/datascience/hzheng/software/crux/cp2k"
+
+modules: []
+
+setup:
+  - "module swap PrgEnv-cray PrgEnv-gnu"
+  - "module load cray-mpich"
+  - "module load cray-fftw"
+  - "module load cray-hdf5"
+  - "module load cray-libsci"
+  - "export PATH=/eagle/datascience/hzheng/software/crux/cp2k/bin:$PATH"
+
+gpu_support: false
+
+run_command: |
+  export OMP_NUM_THREADS=4
+  mpiexec -n 32 --ppn 32 cp2k.popt -i input.inp
+
+input_files: [".inp", ".restart"]
+
+keywords: ["quantum chemistry", "DFT", "CP2K", "molecular dynamics", "ab initio", "condensed matter"]
+aliases: ["cp2k", "cp2k.popt", "cp2k.psmp"]
+
+input_detection:
+  extensions: [".inp"]
+  filenames: []
+  content_markers: ["&GLOBAL", "&FORCE_EVAL", "&DFT", "PROJECT"]
+
+defaults:
+  nodes: 1
+  walltime: 3600
+  queue: "workq"
+  ppn: 128
+
+scaling_notes: "CPU-only build using popt (pure MPI) or psmp (MPI+OpenMP) binary. For psmp: 32 MPI x 4 OMP = 128 cores/node."
+
+required_inputs: [".inp"]
+optional_inputs: [".restart", "*.pdb"]
+output_patterns: ["*.out", "*.restart", "*.xyz", "*.cube"]
+
+build_status: needs_build
+
+notes: "CPU-only build with PrgEnv-gnu + cray-mpich + cray-fftw + cray-hdf5 + cray-libsci on Crux. Use cp2k.popt for pure MPI or cp2k.psmp for MPI+OpenMP."

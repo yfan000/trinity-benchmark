@@ -1,0 +1,64 @@
+name: "chai-lab"
+description: "Chai-1 protein structure prediction model (ROCm port for Odo MI250X)"
+category: ml-framework
+version: "0.6.1"
+
+binary: "python"
+install_path: "/gpfs/wolf2/olcf/csc708/world-shared/hzheng/software/chai_lab"
+
+modules:
+  - "miniforge3/23.11.0-0"
+  - "rocm/6.3.1"
+
+setup:
+  - "source /gpfs/wolf2/olcf/csc708/world-shared/hzheng/software/chai_lab/venv/bin/activate"
+  - "module load rocm/6.3.1"
+  - "export CHAI_DOWNLOADS_DIR=/ccsopen/home/hzheng/software/chai_lab/weights"
+
+gpu_support: true
+gpu_notes: "AMD MI250X via ROCm 6.3.1. torch 2.8.0+rocm6.3 reinstalled after chai-lab pip (which pulls a CUDA wheel)."
+
+python_version: "3.10.13"
+torch_version: "2.8.0+rocm6.3"
+
+run_command: |
+  python - << 'PYEOF'
+  import pathlib, os
+  from chai_lab.chai1 import run_inference
+  import torch
+  candidates = run_inference(
+      fasta_file=pathlib.Path('input.fasta'),
+      output_dir=pathlib.Path('output'),
+      num_trunk_recycles=3,
+      num_diffn_timesteps=200,
+      seed=42,
+      device='cuda' if torch.cuda.is_available() else 'cpu',
+      use_esm_embeddings=True,
+      use_msa_server=False,
+      low_memory=True,
+  )
+  PYEOF
+
+input_files: [".fasta", ".fa"]
+output_patterns: ["output/*.cif", "output/*.npz"]
+
+keywords: ["chai", "chai-1", "chai1", "protein folding", "protein structure", "ROCm", "MI250X", "AMD"]
+aliases: ["chai", "chai1", "chai-lab", "chai_lab"]
+
+defaults:
+  nodes: 1
+  walltime: 3600
+  queue: "batch"
+  account: "csc708"
+
+build_notes: |
+  Installed 2026-05-09. Install job 39918 via GCE sbatch (odo-compute endpoint).
+  Ran on odo12, Python 3.10.13 (miniforge3/23.11.0-0).
+  pip install chai-lab (3 min via OLCF proxy cache).
+  pip install --force-reinstall torch torchvision --index-url rocm6.3 (35 s, cached).
+  CRITICAL: same as Frontier — chai-lab pip pulls CUDA torch wheel; must reinstall ROCm torch after.
+  Smoke test had bash quoting bug (no output); install confirmed complete by timed echoes.
+  Verification pending (GCE endpoints offline post-session).
+
+build_status: "installed"   # 2026-05-13: SMOKE PASS via S3M reservation csc708-amsc-2 (job 40368, odo06, csc708_auser). torch 2.6.0+rocm6.1, chai_lab 0.6.1, 8x MI250X visible. Install fix: torch downgraded from 2.9.1 to 2.6.0+rocm6.1 (chai-lab requires torch<2.7,>=2.3.1); chai_lab installed via constraint file pinning `torch==2.6.0+rocm6.1` to prevent pip resolver from downgrading to CPU wheel. Venv has NO `bin/activate` script — invoke via direct python path: `<install>/venv/bin/python`.
+build_script: "jobs/odo/build_chai_lab/install.sh"

@@ -1,0 +1,50 @@
+# HPL (LINPACK) — HPL.dat is a strict, line-ordered positional file.
+# The single most misunderstood format in the measured answers.
+
+binary_files: []
+
+requirements:
+  - id: INP.hpl.positional_format
+    claim: "HPL.dat is line-ordered and positional — never `KEYWORD value` pairs"
+    decided_by: deterministic
+    check: {kind: regex_absent, pattern: '(?m)^\s*(N|NB|P|Q|RFACT|PMAP|BCAST)\s*[=:]'}
+    dimension: correctness
+    severity: fatal
+    source: "format:HPL"
+    rationale: >-
+      measured defect: "HPL.dat written in an invented 'KEYWORD value' format; the real
+      HPL.dat is a strict line-ordered positional file". Also seen: invented keywords
+      RMAX, B, PMAP used as keys.
+
+  - id: INP.hpl.header_and_output_lines
+    claim: "Begins with the HPLinpack header line and includes the output-file and
+            device-out lines"
+    decided_by: deterministic
+    check: {kind: markers_present, values: ["HPLinpack benchmark input file"]}
+    dimension: completeness
+    severity: fatal
+    source: "catalog:software/crux/hpl.yaml#input_detection.content_markers"
+
+  - id: INP.hpl.count_lines_match
+    claim: "Each count line (`# of problem sizes`, `# of NBs`, `# of process grids`) matches
+            the number of values on the line that follows it"
+    decided_by: deterministic
+    check: {kind: count_match, style: "hpl"}
+    dimension: correctness
+    severity: fatal
+    source: "format:HPL"
+    rationale: "measured defect: a vacuous self-check claimed counts matched when no count
+                lines were present at all"
+
+  - id: INP.hpl.grid_matches_ranks
+    claim: "P x Q equals the total MPI rank count"
+    decided_by: deterministic
+    check: {kind: arithmetic, rule: "P*Q == total_ranks"}
+    dimension: correctness
+    severity: major
+    source: "format:HPL"
+
+free_choice:
+  - axis: "N and NB values"
+    note: "Any problem size and block size suited to the machine's memory is acceptable"
+    source: "model"

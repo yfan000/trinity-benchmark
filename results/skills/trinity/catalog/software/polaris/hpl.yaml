@@ -1,0 +1,54 @@
+name: "HPL"
+description: "HPL/LINPACK benchmark measuring floating-point performance via LU decomposition"
+category: tool
+version: "2.3"
+
+binary: "/eagle/datascience/hzheng/software/polaris/hpl/bin/xhpl"
+install_path: "/eagle/datascience/hzheng/software/polaris/hpl"
+
+modules: []
+
+setup:
+  - "module load PrgEnv-gnu"
+  - "module swap gcc-native gcc-native/12.3"
+  - "module load cray-mpich"
+  - "module load cray-libsci"
+  - "export PATH=/eagle/datascience/hzheng/software/polaris/hpl/bin:$PATH"
+
+gpu_support: false
+gpu_notes: "CPU-only HPL. For GPU-accelerated LINPACK use NVIDIA's nvhpl or Cray's hpcc with GPU offload."
+
+run_command: |
+  mpiexec -n 4 --ppn 4 xhpl
+
+input_files: ["HPL.dat"]
+
+# --- Auto-detection ---
+keywords: ["hpl", "linpack", "hpcg", "benchmark", "peak performance", "Gflops", "LU decomposition", "matrix factorization", "compute benchmark", "top500", "HPL benchmark"]
+aliases: ["hpl", "linpack", "xhpl", "hpcg", "top500-benchmark"]
+
+input_detection:
+  extensions: []
+  filenames: ["HPL.dat"]
+  content_markers: ["HPL Linpack", "HPLinpack", "Ns", "NBs", "Ps", "Qs", "BFACT"]
+
+# --- Smart defaults ---
+defaults:
+  nodes: 1
+  walltime: 1800
+  queue: "debug"
+  ppn: 4
+
+scaling_notes: "Configure HPL.dat: N (problem size) ~ sqrt(total_memory * 0.8 / 8) for double precision. P*Q must equal total MPI ranks. Use NB=232 for A100. Scale to multiple nodes by increasing P*Q and N proportionally."
+
+# --- Input validation ---
+required_inputs: ["HPL.dat"]
+optional_inputs: []
+
+# --- Output retrieval ---
+output_patterns: ["HPL.out", "*.log"]
+
+notes: "Build with cray-libsci (ScaLAPACK+BLAS). Edit Make.Polaris arch file: set CC=cc, LINKER=cc, LAlib=-lsci_gnu. For near-peak performance use cray-libsci or OpenBLAS tuned for A100 memory bandwidth."
+
+build_status: "installed"
+build_notes: "Built v12 (ClearML task e5c4c69629dd4836be4463e21be52ec6) on 2026-05-10. Root fix: Make.Polaris must include SHELL utility vars (SHELL, CD, CP, LN_S, MKDIR, RM, TOUCH) required by Make.top startup/leaf/refresh rules. Without them $(CP) expands to empty and make executes makes/Make.auxil directly. Binary: 248008 bytes."

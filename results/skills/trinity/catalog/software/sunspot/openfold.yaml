@@ -1,0 +1,82 @@
+name: "OpenFold"
+description: "AlphaFold2 PyTorch reimplementation — Intel XPU port for Sunspot (PVC), origin of Aurora/Frontier ports"
+category: bioinformatics
+version: "2.2.0"
+
+binary: "/home/hzheng/software/sunspot/openfold/venv/bin/python"
+install_path: "/home/hzheng/software/sunspot/openfold"
+build_status: built
+
+modules:
+  - frameworks
+
+setup:
+  - "module use /soft/modulefiles"
+  - "module load frameworks"
+  - "export PYTHONNOUSERSITE=1"
+  - "unset PYTHONPATH PYTHONHOME LD_PRELOAD"
+  - "source /home/hzheng/software/sunspot/openfold/venv/bin/activate"
+
+gpu_support: true
+gpu_notes: |
+  Intel Data Center GPU Max 1550 (Ponte Vecchio), 12 XPU tiles per node.
+  frameworks module provides PyTorch 2.10.0a0 + IPEX 2.10.10 with XPU support.
+  Device: xpu:0. ROCm/CUDA not present — all CUDA calls must be mocked or redirected.
+
+run_command: |
+  # Must run on compute node (workq); Intel MPI cannot init on Sunspot login nodes
+  python openfold_infer.py   # use xpu:0 device with sys.modules mock pattern
+
+smoke_command: |
+  # Submit to workq compute node
+  qsub /Users/huihuo.zheng/Documents/Research/AmSC/agentic_workflows/jobs/sunspot/openfold_bench/run.sh
+
+install_notes: |
+  Installed 2026-05-04. 15 autonomous iterations, ~3.5 hours.
+  Venv: --system-site-packages from frameworks module (inherits torch 2.10 XPU + IPEX 2.10).
+  Build/bench scripts: jobs/sunspot/openfold_bench/, jobs/sunspot/openfold_perf/
+  Full case study: case_studies/openfold_xpu_port/report.md
+
+patches:
+  attn_core_cuda_mock:
+    description: "Mock attn_core_inplace_cuda via sys.modules before openfold import"
+    reason: "No CUDA on XPU; must inject mock before openfold.utils.kernel is imported"
+
+  cuda_redirect:
+    description: "Patch torch.Tensor.cuda() to redirect to xpu:0"
+    reason: "OpenFold calls .cuda() in IPA and structure_module; must redirect before model(batch)"
+
+  config_importlib_util:
+    description: "Add 'import importlib.util' after 'import importlib' in openfold/config.py"
+    reason: "Python 3.12 does not auto-load importlib.util submodule"
+
+  attention_core_einsum:
+    description: "Append einsum-based AttentionCore to attention_core.py with nested try/except bias add"
+    reason: |
+      PyTorch 2.10 strict: t[...,N] fails on 0-d tensors and bias shape mismatch raises RuntimeError.
+      Nested try/except skips incompatible biases in chunked attention.
+
+performance:
+  hardware: "Intel Data Center GPU Max 1550 (PVC), Sunspot node x1921c1s5b0n0"
+  config: "n=256 residues, 3 recycling iters, model_1, fp32"
+  mean_fwd_s: 3.16
+  throughput_res_per_s: 81.0
+  peak_mem_gb: 1.31
+  source: "jobs/sunspot/openfold_perf/results.json"
+
+defaults:
+  nodes: 1
+  walltime: 1800
+  queue: "workq"
+  account: "datascience"
+  ppn: 1
+
+keywords: ["OpenFold", "AlphaFold2", "protein structure", "XPU", "Intel GPU", "PVC", "Sunspot", "bioinformatics"]
+aliases: ["openfold", "alphafold2", "protein-folding"]
+
+notes: |
+  This is the origin system for the OpenFold XPU port. All patches here carry forward to Aurora (same hardware).
+  Frontier ROCm port derived from this in 12 additional iterations.
+  See: knowledgebase/hpc/lessons/port_openfold_sunspot_to_frontier.md
+  bf16 via ipex.optimize() FAILS — OpenFold internal fp16 layers conflict with bf16 cast.
+  Scaling / real-inference scripts: jobs/sunspot/openfold_scaling/, jobs/sunspot/openfold_real_inference/

@@ -1,0 +1,63 @@
+name: "NAMD"
+description: "Scalable molecular dynamics code for large biomolecular systems with GPU acceleration"
+category: simulation
+version: "3"
+
+binary: "/lus/tegu/projects/PolarisAT/hzheng/software/namd/bin/namd3"
+install_path: "/lus/tegu/projects/PolarisAT/hzheng/software/namd"
+
+modules:
+  - PrgEnv-gnu
+  - cray-mpich
+  - cudatoolkit-standalone
+
+setup:
+  - "module load PrgEnv-gnu"
+  - "module load cray-mpich"
+  - "module load cudatoolkit-standalone"
+  - "export PATH=/lus/tegu/projects/PolarisAT/hzheng/software/namd/bin:$PATH"
+
+build_status: needs_build
+
+gpu_support: true
+gpu_notes: "GPU-resident mode in NAMD 3 offloads most work to A100 GPUs. Use +devices to specify GPU indices."
+
+run_command: |
+  mpiexec -n 8 --ppn 8 namd3 +devices 0,1,2,3,4,5,6,7 input.namd
+
+input_files: [".namd", ".conf", ".psf", ".pdb"]
+
+keywords: ["molecular dynamics", "MD", "biomolecular simulation", "NAMD", "protein", "membrane", "GPU-resident", "VMD", "Charm++", "PME", "replica exchange"]
+aliases: ["namd", "namd3", "namd2", "charm++"]
+
+input_detection:
+  extensions: [".namd", ".conf", ".psf", ".pdb", ".coor", ".vel"]
+  filenames: ["input.namd", "minimization.namd", "equilibration.namd", "production.namd"]
+  content_markers: ["structure", "coordinates", "parameters", "timestep", "run", "minimize", "PME", "CUDASOAintegrate"]
+
+defaults:
+  nodes: 1
+  walltime: 1800
+  queue: "debug"
+  ppn: 8
+
+scaling_notes: |
+  NAMD 3 GPU-resident mode places one MPI rank per GPU for maximum throughput.
+  Use +devices 0,1,2,3,4,5,6,7 to enumerate all 8 A100s per node.
+  For single-GPU runs: namd3 +devices 0 input.namd (no MPI required).
+  Multi-node: NAMD uses Charm++ communication layer; set ++ppn for PEs per physical node.
+  CUDASOAintegrate yes in the config file enables full GPU integration.
+
+required_inputs: [".namd", ".conf"]
+optional_inputs: [".psf", ".pdb", ".coor", ".vel", ".xsc", "*.prm", "*.rtf"]
+
+output_patterns: ["*.log", "*.dcd", "*.restart.coor", "*.restart.vel", "*.restart.xsc", "*.xst"]
+
+notes: |
+  Build NAMD 3 with CUDA support from source:
+    ./config Linux-x86_64-g++.cuda --with-cuda --cuda-gencode arch=compute_80,code=sm_80
+  NAMD uses the Charm++ runtime; build Charm++ first targeting mpi-linux-x86_64.
+  Requires FFTW (bundled or system) and Tcl for scripting support.
+  +devices flag uses zero-indexed GPU IDs matching CUDA device ordering.
+  Sirius nodes have 8 x NVIDIA A100 (80 GB); GPU-resident mode gives best performance.
+  Input config typically references .psf (structure), .pdb (coordinates), and .prm (parameters).

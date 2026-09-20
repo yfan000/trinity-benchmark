@@ -1,0 +1,16 @@
+app: alphafold
+version: "deps: jax 0.10.0 + dm-haiku 0.0.16 + biopython 1.87"
+system: frontier
+status: installed
+install_prefix: /ccs/proj/csc708/hzheng/software/frontier/alphafold
+built_date: "2026-05-03"
+
+modules:
+  - PrgEnv-gnu
+  - cray-python
+
+notes: |
+  Python dependency stack only (jax+haiku+biopython+ml_collections).
+  CPU jax — ROCm jax wheels are gated; GPU acceleration requires manual ROCm jax install.
+  Use JAX_PLATFORMS=cpu for verify on login nodes (avoids pthread_create EAGAIN).
+  ClearML task: 56cbdb12 (build_alphafold_frontier_v1, tier-3 batch C).

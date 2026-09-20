@@ -1,0 +1,12 @@
+name: "Quantum ESPRESSO"
+description: "Plane-wave DFT code — GPU-accelerated build on Sophia (V100)"
+category: dft
+version: "7.4"
+
+binary: "/eagle/datascience/hzheng/software/sophia/qe/7.4/bin/pw.x"
+install_path: "/eagle/datascience/hzheng/software/sophia/qe/7.4"
+
+gpu_support: true
+
+keywords: ["QE", "quantum espresso", "DFT", "plane-wave", "pw.x"]
+aliases: ["qe", "quantum_espresso"]

@@ -1,0 +1,56 @@
+name: "NekRS"
+description: "GPU-native spectral element CFD solver based on Nek5000"
+category: simulation
+version: ""
+
+binary: "nekrs"
+install_path: ""   # fill in after build
+
+modules:
+  - PrgEnv-gnu
+  - cray-mpich
+  - cudatoolkit
+  - cmake
+
+setup:
+  - "module reset"
+  - "module load PrgEnv-gnu"
+  - "module load cray-mpich"
+  - "module load cudatoolkit"
+  - "export PATH=<install_path>/bin:$PATH"
+
+gpu_support: true
+gpu_notes: "GPU-native via OCCA; targets CUDA backend on A100"
+
+run_command: |
+  srun -n 4 -G 4 --gpu-bind=single:1 nekrs --setup case.par
+
+input_files: [".par", ".udf", ".oudf", ".re2", ".ma2"]
+
+# --- Auto-detection ---
+keywords: ["CFD", "fluid dynamics", "spectral element", "NekRS", "Nek5000", "turbulence", "heat transfer"]
+aliases: ["nekrs", "nek", "nek5000"]
+
+input_detection:
+  extensions: [".par", ".udf", ".oudf"]
+  filenames: []
+  content_markers: ["[GENERAL]", "[MESH]", "startFrom"]
+
+# --- Smart defaults ---
+defaults:
+  nodes: 1
+  walltime: 1800
+  queue: "debug"
+  constraint: "gpu"
+  account: "dasrepo"
+
+scaling_notes: "1 MPI rank per GPU. Strong scaling up to thousands of GPUs."
+
+# --- Input validation ---
+required_inputs: [".par", ".re2"]
+optional_inputs: [".udf", ".oudf", ".ma2"]
+
+# --- Output retrieval ---
+output_patterns: ["*.fld", "*.f*", "*.log"]
+
+notes: "Binary path TBD — needs build. Targets CUDA backend for A100 GPUs."

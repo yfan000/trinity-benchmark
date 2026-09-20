@@ -1,0 +1,66 @@
+# ALCF Sirius — staging cluster at Argonne National Laboratory
+
+name: "Sirius"
+facility: "ALCF"
+description: "ALCF staging cluster"
+
+software_build_dir: "/lus/tegu/projects/PolarisAT/hzheng/software"
+
+backend: "alcf_clearml"
+
+compute:
+  resource_id: "2fef6c82-a982-491e-91a3-d75b59b707af"
+  api_base_url: "https://api.alcf.anl.gov/api/v1"
+
+storage:
+  tegu:
+    mount_path: "/tegu"
+    remote_base_path: "/PolarisAT/hzheng"
+  home:
+    resource_id: "6115bd2c-957a-4543-abff-5fae52992ff2"
+    mount_path: "/home"
+
+globus:
+  tegu:
+    endpoint_id: "b2686037-3531-11f1-aa88-0ea3589134b3"
+    path_prefix: "/lus/tegu/datascience/hzheng"
+  home:
+    endpoint_id: "b2686037-3531-11f1-aa88-0ea3589134b3"
+    path_prefix: "/home/hzheng"
+
+clearml:
+  api_host: "https://amscclearml.alcf.anl.gov"
+  queues:
+    sirius: "a667ba6087a1443e8a8e8d917ccc4d2a"
+    sirius-login: "5099c5e848c5433089e622e14bf6c2e2"
+    sirius-services: "358286b8ecc5410ba9908f34e43bfc45"
+    sirius-services-executor: "b115b3c79f8e4a269c5612e69ed472e8"
+    sirius-persistent-compute: "eb3c7a70fca0481bbc76e8a2ae870856"
+    sirius-persistent-compute-b: "c9a4ddd7aefd44a8a704de0293567dc5"
+
+scheduler:
+  # Source: ALCF Sirius is an internal staging cluster; limited public docs (2026-05-09)
+  queues:
+    workq:
+      min_nodes: 1
+      max_nodes: 4           # entire cluster (4 A100-SXM4-40GB nodes)
+      min_walltime: 300
+      max_walltime: 86400
+      notes: "Only queue. 4-node cluster used for staging/testing. No per-project limits documented."
+
+hardware:
+  nodes: 4
+  gpus_per_node: 4
+  gpu_type: "A100-SXM4-40GB"
+  cpus_per_node: 64
+  memory_per_node_gb: 512
+
+job_defaults:
+  shell: "#!/bin/bash -l"
+  nodes: 1
+  walltime: 3600
+  queue: "workq"
+  account: "datascience"
+  ppn: 4
+  custom_attributes:
+    filesystems: "home:tegu"

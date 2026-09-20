@@ -1,0 +1,56 @@
+name: "Quantum ESPRESSO"
+description: "DFT electronic structure with GPU acceleration (OpenACC/CUDA) via NERSC module"
+category: dft
+version: "7.3.1"
+
+module: "espresso/7.3.1-libxc-6.2.2-gpu"
+binary: "pw.x"    # available after module load espresso
+
+# Custom 7.4 build attempted but cmake configure failed (2026-04-21); use NERSC module instead
+# install_path: "/global/u2/h/hzheng/software/perlmutter/qe/7.4"  (incomplete)
+
+modules:
+  - "espresso/7.3.1-libxc-6.2.2-gpu"
+
+setup:
+  - "module load espresso"
+
+gpu_support: true
+gpu_notes: "GPU-accelerated (OpenACC). Default NERSC module includes libxc-6.2.2 and GPU offload."
+
+run_command: |
+  srun -n 4 --gpus-per-task=1 pw.x -npool 4 -input scf.in
+
+input_files: [".in", ".pwi"]
+
+# --- Auto-detection ---
+keywords: ["DFT", "density functional theory", "electronic structure", "PWscf", "quantum espresso", "QE", "VASP alternative", "plane wave"]
+aliases: ["qe", "pwscf", "pw.x", "quantum-espresso", "espresso"]
+
+input_detection:
+  extensions: [".in", ".pwi"]
+  filenames: ["scf.in", "relax.in", "nscf.in", "bands.in"]
+  content_markers: ["&CONTROL", "&SYSTEM", "&ELECTRONS", "calculation ="]
+
+# --- Smart defaults ---
+defaults:
+  nodes: 1
+  walltime: 1800
+  queue: "debug"
+  constraint: "gpu"
+  account: "amsc013"
+
+scaling_notes: "4 MPI ranks per node (1 per GPU). Use -npool for k-point parallelism."
+
+# --- Input validation ---
+required_inputs: [".in", ".pwi"]
+optional_inputs: [".UPF", "pseudo/"]
+
+# --- Output retrieval ---
+output_patterns: ["*.out", "*.xml", "*.save/", "*.wfc*", "*.bands.dat*"]
+
+notes: >
+  Use NERSC module 'espresso/7.3.1-libxc-6.2.2-gpu' — no manual build needed.
+  Pseudopotentials: download SSSP 1.3.0 PBE efficiency UPF files at runtime with curl.
+  Band structure workflow: SCF (automatic k-mesh) → bands pw.x (crystal_b k-path) → bands.x post-processing.
+  Account: amsc013 (express_amsc or debug QOS).

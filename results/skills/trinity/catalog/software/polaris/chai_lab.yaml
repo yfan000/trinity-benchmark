@@ -1,0 +1,81 @@
+name: "chai-lab"
+description: "Chai-1 protein structure prediction model (CUDA port for Polaris A100)"
+category: ml-framework
+version: "0.6.1"
+
+binary: "python"
+install_path: "/eagle/datascience/hzheng/software/polaris/chai_lab/venv"
+
+modules: []
+
+setup:
+  - "unset PYTHONPATH PYTHONHOME LD_PRELOAD"
+  - "source /eagle/datascience/hzheng/software/polaris/chai_lab/venv/bin/activate"
+  - "export CHAI_DOWNLOADS_DIR=/eagle/datascience/hzheng/software/polaris/chai_lab/weights"
+
+gpu_support: true
+gpu_notes: "NVIDIA A100-SXM4-40GB via CUDA 12.4. 4 GPUs/node; bfloat16 required (A100 supported). Inference uses device='cuda' by default."
+
+run_command: |
+  python - << 'PYEOF'
+  import pathlib
+  from chai_lab.chai1 import run_inference
+  candidates = run_inference(
+      fasta_file=pathlib.Path("input.fasta"),
+      output_dir=pathlib.Path("output"),   # must be empty before run
+      num_trunk_recycles=3,
+      num_diffn_timesteps=200,
+      seed=42,
+      device="cuda",
+      use_esm_embeddings=True,
+      use_msa_server=False,
+      low_memory=True,
+  )
+  PYEOF
+
+input_files: [".fasta", ".fa"]
+output_patterns: ["output/*.cif", "output/*.npz"]
+
+keywords: ["chai", "chai-1", "chai1", "protein folding", "protein structure", "structure prediction", "CUDA", "A100"]
+aliases: ["chai", "chai1", "chai-lab", "chai_lab"]
+
+input_detection:
+  extensions: [".fasta", ".fa", ".faa"]
+  content_markers: [">"]
+
+defaults:
+  nodes: 1
+  walltime: 1800
+  queue: "debug"
+  account: "datascience"
+  ppn: 4
+
+smoke_command: |
+  python -c "
+  import torch, chai_lab
+  assert torch.cuda.is_available(), 'CUDA not available'
+  assert torch.cuda.device_count() >= 1
+  print('torch:', torch.__version__, '| cuda devices:', torch.cuda.device_count())
+  print('chai_lab:', chai_lab.__version__)
+  "
+
+build_notes: |
+  Ported 2026-05-06 from Aurora XPU fork (msinclair-py/chai-lab) to upstream CUDA version.
+  Base: custom venv from /soft/applications/conda/2025-09-25/mconda3/bin/python (bypasses
+  clearml-agent Python 3.13 trap). torch 2.6.0+cu124 from PyPI cu124 index. chai_lab 0.6.1
+  from PyPI (upstream CUDA version, NOT the XPU fork).
+
+  Gotchas:
+  - chai-lab requires OUTPUT_DIR to be empty before run_inference (AssertionError otherwise)
+  - FASTA must go in a separate INPUT_DIR, not OUTPUT_DIR
+  - Model weights (~few GB) auto-download to CHAI_DOWNLOADS_DIR on first run (proxy required)
+  - In PBS scripts, use: export OUTPUT_DIR=/actual/path (not bare `export OUTPUT_DIR` — bash
+    exports unset var, Python KeyError results)
+  - SOFT_PY workaround required for clearml-agent tasks (conda trap): use direct mconda3 path
+  - A100 (A100-SXM4-40GB) confirms 4 GPUs/node; inference takes ~20s on A100 for 23-aa peptide
+
+build_status: "completed"
+build_script: "jobs/polaris/build_chai_lab/install.sh"
+inference_script: "jobs/polaris/build_chai_lab/infer_wrapper.sh"
+clearml_install_task: "1b3195f9ede14af1a8954c9d53e8c002"
+clearml_smoke_task: "359279fdc71341ea84e32b2eb3ce0976"

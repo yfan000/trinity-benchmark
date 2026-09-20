@@ -1,0 +1,51 @@
+# Software catalog entry template for Polaris
+# Copy this file as <app-name>.yaml and fill in the fields.
+
+name: ""                    # Display name (e.g., "NAMD", "Quantum ESPRESSO")
+description: ""             # One-line description of the software
+category: ""                # One of: simulation, dft, ml-framework, library, tool
+version: ""                 # Version string (e.g., "7.5", "3.0b7", "2024.11")
+
+binary: ""                  # Full path to the main executable
+install_path: ""            # Root install directory (e.g., /soft/applications/namd)
+
+modules: []                 # Dependent modules to load (e.g., [cudatoolkit-standalone, nvhpc])
+
+setup:                      # Commands to run before the application (in order)
+  - "module use /soft/modulefiles"
+  # - "module load <name>"
+
+gpu_support: false          # Whether the application supports GPU acceleration
+gpu_notes: ""               # How GPUs are used (e.g., "native CUDA", "via Kokkos")
+
+run_command: |              # Example mpiexec launch command
+  mpiexec -n 4 --ppn 4 $EXE -in input_file
+
+input_files: []             # List of typical input file patterns (e.g., [".namd", ".pdb"])
+
+# --- Auto-detection ---
+keywords: []                # Natural language keywords (e.g., ["molecular dynamics", "MD"])
+aliases: []                 # Names user might say (e.g., ["qe", "pwscf", "pw.x"])
+
+input_detection:
+  extensions: []            # File extensions (e.g., [".namd", ".conf"])
+  filenames: []             # Exact filenames (e.g., ["INCAR", "POSCAR"])
+  content_markers: []       # Strings inside files (e.g., ["&CONTROL", "&SYSTEM"])
+
+# --- Smart defaults ---
+defaults:
+  nodes: 1
+  walltime: 600             # seconds
+  queue: "debug"
+  ppn: 4                    # MPI ranks per node
+
+scaling_notes: ""           # Guidance for multi-node jobs
+
+# --- Input validation ---
+required_inputs: []         # At least one must be present (OR logic by default)
+optional_inputs: []         # Warn if missing
+
+# --- Output retrieval ---
+output_patterns: []         # Patterns for result files to download
+
+notes: ""

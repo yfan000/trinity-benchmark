@@ -1,0 +1,48 @@
+name: "NAMD"
+description: "GPU-resident molecular dynamics engine for biomolecular simulations"
+category: simulation
+version: "3.0.2"
+
+binary: "/eagle/AmSC_Demos/hzheng/soft/namd/NAMD_3.0.2_Linux-x86_64-ofi-smp-CUDA-memopt/namd3"
+install_path: "/eagle/AmSC_Demos/hzheng/soft/namd/NAMD_3.0.2_Linux-x86_64-ofi-smp-CUDA-memopt"
+
+modules: []
+
+setup: []
+
+gpu_support: true
+gpu_notes: "Native GPU-resident mode with +devices flag"
+
+run_command: |
+  EXE=/eagle/AmSC_Demos/hzheng/soft/namd/NAMD_3.0.2_Linux-x86_64-ofi-smp-CUDA-memopt/namd3
+  mpiexec -n 1 --ppn 1 --depth=16 --cpu-bind=depth \
+      $EXE +p 15 +devices 3,2,1,0 input.namd
+
+input_files: [".namd", ".pdb", ".psf", ".par"]
+
+# --- Auto-detection ---
+keywords: ["molecular dynamics", "MD simulation", "biomolecular", "CHARMM", "protein simulation", "STMV", "membrane"]
+aliases: ["namd", "namd3", "namd2"]
+
+input_detection:
+  extensions: [".namd", ".conf"]
+  filenames: []
+  content_markers: ["coordinates", "structure", "parameters", "paraTypeCharmm"]
+
+# --- Smart defaults ---
+defaults:
+  nodes: 1
+  walltime: 1800
+  queue: "debug"
+  ppn: 1
+
+scaling_notes: "GPU-resident mode: use 1 process per node with +devices for all 4 GPUs. 1 node handles most systems up to ~1M atoms. For very large systems (>5M atoms), consider multi-node."
+
+# --- Input validation ---
+required_inputs: [".namd"]
+optional_inputs: [".pdb", ".psf", ".par", ".inp"]
+
+# --- Output retrieval ---
+output_patterns: ["*-output.*", "*.log", "*.dcd", "*.coor", "*.vel", "*.xsc"]
+
+notes: "Benchmark data (STMV) available at https://www.ks.uiuc.edu/Research/namd/utilities/stmv.tar.gz"

@@ -1,0 +1,19 @@
+app: hpl
+version: "2.3"
+system: frontier
+status: installed
+binary: /ccs/proj/csc708/hzheng/software/frontier/hpl/bin/xhpl
+install_prefix: /ccs/proj/csc708/hzheng/software/frontier/hpl
+built_date: "2026-04-30"
+
+modules:
+  - PrgEnv-gnu
+
+compilers:
+  CC: cc
+  FC: ftn
+
+notes: |
+  Use make -j 1 (not make -j N) — parallel make hits race condition in HPL's Makefile.
+  rm -rf include during rebuild kills source headers (hpl_misc.h etc) — only delete bin/,lib/.
+  ClearML task: fcb8e8d4 (build_hpl_frontier_v3, tier-1).

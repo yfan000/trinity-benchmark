@@ -1,0 +1,246 @@
+# Batch job creation — requirements that hold for the scheduler family.
+#
+# EVIDENCE LIMIT (confirmed 2026-09-15): the run archive is Polaris-only. The live tree and the
+# archive hold the same files, and there are no Crux or Aurora siblings, so every "run:N/M"
+# figure below is Polaris evidence. Two consequences:
+#   - Aurora's `home:flare` filesystem convention has no run behind it; the catalog is the only
+#     source, and the rules here are stated generically rather than naming eagle.
+#   - There is NO Slurm run anywhere in the archive. The Slurm half of correct_dialect, and any
+#     future Slurm-specific rule, is catalog-derived and unvalidated by execution. Treat it the
+#     way `source: model` items are treated — a strong prior, not a fact.
+#
+# Almost everything here is mined from 138 real PBS scripts in the Polaris archive
+# (results/skills/trinity/runs/mined.json), not from documentation. Three rules that WERE
+# written from documentation turned out to be wrong, and are recorded below as free_choice or
+# omitted entirely rather than silently dropped — the mistake is more instructive than the fix.
+
+requirements:
+
+  # ---- present in every real script, across all six applications -----------------------
+  - id: BATCH.common.filesystems_declared
+    claim: "Declares every filesystem the job touches with `-l filesystems=`"
+    decided_by: deterministic
+    check: {kind: regex, pattern: '(?m)^\s*#PBS\s+-l\s+filesystems='}
+    applies_if: {scheduler: "PBS Pro"}
+    dimension: usability
+    severity: fatal
+    source: "run:138/138"
+    support: {runs: 138, of: 138, apps: 6}
+    rationale: >-
+      ALCF rejects or hangs a job that does not name its filesystems. Present in every
+      script of every application in the archive — the strongest signal in the mined set.
+
+  - id: BATCH.common.walltime_declared
+    claim: "Requests a walltime with `-l walltime=`"
+    decided_by: deterministic
+    check: {kind: regex, pattern: '(?m)^\s*#PBS\s+-l\s+.*\bwalltime='}
+    applies_if: {scheduler: "PBS Pro"}
+    dimension: completeness
+    severity: fatal
+    source: "run:138/138"
+    support: {runs: 138, of: 138, apps: 6}
+
+  - id: BATCH.common.queue_declared
+    claim: "Names a queue with `-q`"
+    decided_by: deterministic
+    check: {kind: regex, pattern: '(?m)^\s*#PBS\s+-q\s+\S'}
+    applies_if: {scheduler: "PBS Pro"}
+    dimension: completeness
+    severity: fatal
+    source: "run:138/138"
+    support: {runs: 138, of: 138, apps: 6}
+
+  # ---- near-universal: strong requirements, but not absolutes --------------------------
+  - id: BATCH.common.select_declared
+    claim: "States the node request with `-l select=`"
+    decided_by: deterministic
+    check: {kind: regex, pattern: '(?m)^\s*#PBS\s+-l\s+.*\bselect='}
+    applies_if: {scheduler: "PBS Pro"}
+    dimension: completeness
+    severity: major
+    source: "run:133/138"
+    support: {runs: 133, of: 138}
+    rationale: "absent only from a few PyTorch scripts that take the default allocation"
+
+  - id: BATCH.common.account_declared
+    claim: "Charges a project with `-A`"
+    decided_by: deterministic
+    check: {kind: regex, pattern: '(?m)^\s*#PBS\s+-A\s+\S'}
+    applies_if: {scheduler: "PBS Pro"}
+    dimension: completeness
+    severity: major
+    source: "run:130/138"
+    support: {runs: 130, of: 138}
+
+  # BATCH.common.job_name_declared was REMOVED in r21. An unnamed job gets a default
+  # name and runs normally — 11 of 146 real scripts omit -N. It penalised nothing that
+  # affects execution.
+
+  # ---- correctness of what is written --------------------------------------------------
+  - id: BATCH.common.queue_exists
+    claim: "The queue named in the directives exists on that system"
+    decided_by: deterministic
+    check: {kind: queue_exists}
+    dimension: correctness
+    severity: fatal
+    source: "catalog:systems/<system>.yaml#scheduler.queues"
+    rationale: >-
+      A coverage gap found by a reviewer reading a trace. queue_exists lived only in Resource
+      selection, so a batch script could name a queue that does not exist and pass all eleven
+      Batch checks. The case: `#PBS -q workq` on Crux, whose queues are debug, workq-route,
+      preemptable and demand — PBS rejects it at submission.
+
+      Calibration had already shown this: the `nonexistent_queue` mutation was caught 0 times
+      out of 7, and I recorded that as a fault in the test harness rather than the missing
+      requirement it actually was.
+
+  - id: BATCH.common.correct_dialect
+    claim: "Uses the target system's scheduler dialect — PBS directives on a PBS system,
+            Slurm directives on a Slurm system, never both"
+    decided_by: deterministic
+    check: {kind: dialect_match}
+    dimension: correctness
+    severity: fatal
+    source: "catalog:systems/<system>.yaml#scheduler.type"
+    rationale: "measured defect: a Slurm allocation command emitted for a PBS Pro system"
+
+  - id: BATCH.common.no_directive_comments
+    claim: "No trailing comment on a #PBS line — qsub does not treat # as a comment
+            delimiter inside a directive, so the trailing text becomes extra arguments"
+    decided_by: deterministic
+    check: {kind: regex_absent, pattern: '(?m)^\s*#PBS\s+[^\n#]*#'}
+    applies_if: {scheduler: "PBS Pro"}
+    dimension: usability
+    severity: major
+    source: "docs:ALCF known-issues + example-job-scripts; run:0/146"
+    rationale: >-
+      ALCF documents this as a known issue, in results/skills/hpc/docs/known-issues.md and
+      again in example-job-scripts.md: "If you try to add comments within the directive list,
+      you could experience submission issues due to PBS attempting to read your comment as an
+      additional directive. This includes adding comments on the same line as a directive
+      (i.e., #PBS -q <queue_name> #comment)." The archive agrees by omission: 0 of 146 real
+      scripts do it.
+
+      Kept at major rather than fatal because the facility says "could experience", not
+      "will fail" — the failure is real but not certain.
+
+      Process note: when a reviewer challenged this rule I defended it by citing 0/146, which
+      only shows the practice is unattested, and asserted the mechanism from memory. The
+      actual evidence was a facility document already cached in this repo. Absence of a
+      practice is not proof it fails; check for a source before defending a rule. The
+      companion case is cd ${PBS_O_WORKDIR}, where the archive contradicted the documentation
+      and the rule was correctly demoted.
+
+  # BATCH.common.no_shell_vars_in_directives was REMOVED in r21. 17 real scripts write
+  # `#PBS -o .../job.o${PBS_JOBID}` or `-o $WORK_DIR/${name}.out` and ran. Whatever PBS does
+  # with the variable, it does not stop the job, so the rule failed the test a reviewer set:
+  # if it does not affect running the script, it should not be a requirement. Both this and
+  # job_name_declared had already produced calibration false positives on real production
+  # scripts, and I recorded them as "minor, costs nothing" instead of asking whether they
+  # should exist.
+
+  # BATCH.common.launcher_matches_catalog was REPLACED in r4. It demanded the catalog's exact
+  # command form and was the last remaining source of false positives: 3 of 7 hand-verified
+  # production scripts failed it, because real launchers are richer than the catalog example
+  # (`mpiexec -n 4 --ppn 4 --depth=8 --cpu-bind=depth $PW_X -in si.scf.in` vs a bare
+  # `pw.x -in input`). Being fatal, one firing sank the whole script. What matters is that the
+  # right program is launched at all, not that the flags match a canonical string.
+  - id: BATCH.common.invokes_application
+    claim: "Actually launches the application — a launcher line that runs the application's
+            binary, however it is flagged"
+    decided_by: deterministic
+    check: {kind: invokes_app}
+    dimension: correctness
+    severity: fatal
+    source: "run:138/138 launch through mpiexec/srun/torchrun"
+    rationale: >-
+      The basic version of the rule it replaced. Flags, affinity settings, working directories
+      and input paths are free; launching nothing, or launching the wrong program, is not.
+
+  - id: BATCH.common.no_placeholders
+    claim: "Fully concrete and submittable — no placeholder paths, no `replace this` comments,
+            no unsubstituted example filenames from a worked example"
+    decided_by: deterministic
+    check: {kind: regex_absent, pattern: '<[A-Z_]{3,}>|YOUR_|replace\s+this|/path/to/|TODO'}
+    dimension: usability
+    severity: fatal
+    source: "model"
+    rationale: "measured defect cluster; not yet confirmed against runs"
+
+  - id: BATCH.common.inputs_reachable
+    applies_if: {has_required_inputs: true}
+    claim: "The job can FIND its inputs. Passing filenames explicitly is one way; a case stem
+            or prefix that the application resolves to its own file set is equally correct,
+            as is relying on a documented default. Follow the catalog's run_command: if that
+            takes a stem, so may the answer. Where the application requires a FIXED filename
+            (xhpl reads only `HPL.dat`) and the supplied file is named otherwise, the script
+            must copy, move or link it into place — a real archived Crux script does exactly
+            `cp runHPL.dat HPL.dat`. Mark violated when the application would not find its
+            input at runtime, not merely when no filename appears on the command line."
+    decided_by: judge
+    dimension: correctness
+    severity: major
+    source: "catalog:software/<system>/<app>.yaml#run_command"
+    rationale: >-
+      Renamed from inputs_passed, which stated a MECHANISM rather than the requirement and so
+      penalised the documented invocation. nekRS was marked violated for
+      `nekrs --setup case --backend CUDA`, which does not name case.par, case.re2 or case.udf
+      — but the catalog's own run_command is
+      `nekrs --setup <casename> --backend CUDA --device-id 0`. The answer followed the
+      catalog exactly and was failed for it.
+
+      Third rule found stating a mechanism or over-reading its own title, after
+      claims_true_to_catalog (checked one field, claimed to cover facility facts) and
+      no_vague_performance_claims (caught descriptions as well as promises). A judged rule is
+      read by an LLM: if the title and the claim disagree, the title wins.
+
+  # BATCH.common.would_run was REMOVED in r3. It produced 3 of the false positives on
+  # hand-verified production scripts, and every objection it raised was a recycled catalog
+  # complaint already covered by a named rule — it flagged `-q R7143698` because the catalog
+  # does not list reservations, and flagged a QMCPACK launch for using a different working
+  # directory than the catalog example. Asking the judge to speculate about an environment it
+  # cannot see produced speculation.
+
+# -----------------------------------------------------------------------------------------
+# Where successful runs disagree with each other, the disagreement IS the evidence. A judge
+# must not deduct on any axis listed here.
+free_choice:
+
+  - axis: "filesystems ordering"
+    note: "`home:eagle` and `eagle:home` are both correct"
+    source: "run:97 vs 45 of 138"
+    rationale: >-
+      The site conventions list one ordering. Real runs use both, roughly 2:1, across every
+      application. Deducting for the order would fail a third of working scripts.
+
+  - axis: "working directory strategy"
+    note: >-
+      Absolute paths, `cd $(dirname $0)`, and `cd ${PBS_O_WORKDIR}` are all acceptable.
+      Do NOT require ${PBS_O_WORKDIR}.
+    source: "run:3/138 use PBS_O_WORKDIR"
+    rationale: >-
+      This was written into the site conventions as a rule, and into a v4 Batch requirement
+      as "an explicit change into that directory using the scheduler's own variable". It
+      appears in 3 of 138 real scripts. Enforcing it would mark down 98% of working scripts.
+      The clearest example in this project of a documentation-derived rule contradicted by
+      practice.
+
+  - axis: "topology placement"
+    note: "`-l place=scatter` is optional, not required"
+    source: "run: present in some scripts of 4 apps, universal in none"
+    rationale: >-
+      Defect-clustering proposed this as the highest-reach Batch fix, "reaches ~38". That was
+      an LLM's inference from defect text. The runs say it is situational.
+
+  - axis: "module purge"
+    note: "Starting with `module purge` is optional"
+    source: "run:6/138 overall, but 6/6 for QMCPACK"
+    rationale: "app-specific habit rather than a site rule; do not generalise it"
+
+  - axis: "output and error paths"
+    note: "`-o`/`-e` may be omitted; PBS defaults to <jobname>.o<jobid>"
+    source: "run:-o in most, -e in a minority"
+
+  - axis: "error handling"
+    note: "`set -e` is good practice, not a requirement"
+    source: "run:59/138"

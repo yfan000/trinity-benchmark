@@ -1,0 +1,60 @@
+name: "Python / Conda"
+description: "Default scientific Python stack via miniforge3 on Odo (Frontier-architecture AMD MI250X training system)"
+category: ml-framework
+version: "miniforge3/23.11.0-0"
+
+binary: "python"
+install_path: "/sw/odo/miniforge3/23.11.0-0"
+
+modules:
+  - miniforge3/23.11.0-0
+
+setup:
+  - "module load miniforge3/23.11.0-0"
+  - "conda activate"
+
+gpu_support: true
+gpu_notes: "AMD MI250X (ROCm); use PyTorch with ROCm backend. rocm module must be loaded for GPU ops."
+
+run_command: |
+  python train.py                                          # single GPU (1 GCD)
+  srun -N 1 --ntasks-per-node 8 python train.py           # all 8 GCDs on one node
+
+input_files: [".py"]
+
+keywords: ["python", "pytorch", "tensorflow", "machine learning", "deep learning", "training",
+           "neural network", "ML", "AI", "fine-tune", "LLM", "transformer", "CNN", "rocm", "hip"]
+aliases: ["python", "conda", "miniforge", "pytorch", "torch"]
+
+input_detection:
+  extensions: [".py"]
+  filenames: ["train.py", "main.py", "run.py", "requirements.txt"]
+  content_markers: ["import torch", "import tensorflow", "import numpy", "from torch"]
+
+defaults:
+  nodes: 1
+  walltime: 1800
+  queue: "batch"
+  account: "csc708"
+  ppn: 8          # 8 GCDs per node
+
+scaling_notes: "Single GCD: --ntasks-per-node 1. Full node: --ntasks-per-node 8. Multi-node: srun across nodes with torch.distributed or DeepSpeed."
+
+required_inputs: [".py"]
+optional_inputs: [".yaml", ".json", ".csv", ".pt", ".pth", ".h5"]
+output_patterns: ["*.log", "*.pt", "*.pth", "*.h5", "*.csv"]
+
+notes: |
+  Odo mirrors Frontier's software stack. After loading miniforge3, activate the
+  base env or a named conda env. For ROCm-aware PyTorch use a wheel built against
+  the system rocm module (e.g. rocm/5.7.0 or rocm/6.2.4 — match the loaded version).
+  Example job header:
+    #SBATCH -A csc708
+    #SBATCH -p batch
+    #SBATCH -N 1
+    #SBATCH --gpus-per-node 8
+    #SBATCH -t 00:30:00
+    module load miniforge3/23.11.0-0
+    module load rocm
+    conda activate myenv
+    srun python train.py

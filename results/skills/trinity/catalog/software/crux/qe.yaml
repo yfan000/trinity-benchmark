@@ -1,0 +1,47 @@
+name: "Quantum ESPRESSO"
+description: "Quantum ESPRESSO plane-wave DFT package (CPU-only build)"
+category: dft
+version: ""
+
+binary: "/eagle/datascience/hzheng/software/crux/qe/7.4/bin/pw.x"
+install_path: "/eagle/datascience/hzheng/software/crux/qe/7.4"
+
+modules: []
+
+setup:
+  - "module swap PrgEnv-cray PrgEnv-gnu"
+  - "module load cray-mpich"
+  - "module load cray-fftw"
+  - "module load cray-libsci"
+  - "export PATH=/eagle/datascience/hzheng/software/crux/qe/bin:$PATH"
+
+gpu_support: false
+
+run_command: |
+  mpiexec -n 16 --ppn 16 pw.x -in input.scf.in
+
+input_files: [".in", ".scf.in", ".relax.in"]
+
+keywords: ["DFT", "density functional theory", "Quantum ESPRESSO", "plane-wave", "ab initio"]
+aliases: ["qe", "quantum espresso", "pw.x", "pwscf"]
+
+input_detection:
+  extensions: [".in"]
+  filenames: []
+  content_markers: ["&CONTROL", "&SYSTEM", "&ELECTRONS", "calculation"]
+
+defaults:
+  nodes: 1
+  walltime: 3600
+  queue: "workq"
+  ppn: 128
+
+scaling_notes: "CPU-only build. QE uses FFTW and ScaLAPACK (cray-libsci). For k-point parallelism use -nk flag. Typical runs: 16-128 MPI ranks."
+
+required_inputs: [".in"]
+optional_inputs: ["*.UPF"]
+output_patterns: ["*.out", "*.xml", "*.save/"]
+
+build_status: built
+
+notes: "CPU-only build with PrgEnv-gnu + cray-mpich + cray-fftw + cray-libsci (provides BLAS/LAPACK/ScaLAPACK). Pseudopotentials must be provided separately."

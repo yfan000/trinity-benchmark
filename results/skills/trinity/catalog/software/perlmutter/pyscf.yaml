@@ -1,0 +1,24 @@
+name: "PySCF"
+description: "Python-based Simulations of Chemistry Framework with GPU acceleration (gpu4pyscf)"
+category: "quantum-chemistry"
+version: "latest"
+
+install_path: "/global/cfs/cdirs/dasrepo/hzheng/software/perlmutter/pyscf"
+venv: "/global/cfs/cdirs/dasrepo/hzheng/software/perlmutter/pyscf/venv"
+activate: "source /global/cfs/cdirs/dasrepo/hzheng/software/perlmutter/pyscf/venv/bin/activate"
+
+gpu_support: true
+gpu_notes: "gpu4pyscf-cuda12x on A100 (sm_80). Use 'from gpu4pyscf import dft'."
+
+setup:
+  - "module load PrgEnv-gnu"
+  - "module load pytorch/2.6.0-1"
+  - "source /global/cfs/cdirs/dasrepo/hzheng/software/perlmutter/pyscf/venv/bin/activate"
+
+keywords: ["quantum chemistry", "DFT", "HF", "BFD", "ccECP", "QMC", "trial wavefunction"]
+aliases: ["pyscf", "gpu4pyscf"]
+
+notes: >
+  Install: pip install gpu4pyscf-cuda12x h5py (CUDA 12, A100).
+  Requires pytorch/2.6.0-1 module for CUDA runtime (cupy depends on it).
+  NERSC IRI job: 52803672 (express_amsc, gpu constraint).
