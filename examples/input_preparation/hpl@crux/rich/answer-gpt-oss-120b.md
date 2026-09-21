@@ -1,0 +1,43 @@
+# gpt-oss-120b — hpl@crux, rich arm
+
+Input preparation. **PASS** (correctness 2/2, completeness 2/2, usability 2/2; 0 of 13 requirements violated).
+
+````
+**HPL.dat** – HPL‑Linpack input file that tells the benchmark the problem size, block size, process grid and algorithmic parameters for the Crux (ALCF AMD EPYC) run.
+
+```text
+HPLinpack benchmark input file
+Cray/ALCF Crux EPYC Cluster
+HPL.out      output file name (if any)
+6            device out (6=stdout,7=stderr,file)
+1            # of problems sizes (N)
+50000        Ns
+1            # of NBs
+232          NBs
+0            PMAP process mapping (0=Row-,1=Column-major)
+1            # of process grids (P x Q)
+2            Ps
+2            Qs
+16.0         threshold
+1            # of panel fact
+0            PFACTs (0=left, 1=Crout, 2=Right)
+1            # of recursive stopping criterium
+1            NBMINs (>= 1)
+1            # of panels in recursion
+1            NDIVs
+1            # of recursive panel fact.
+0            RFACTs (0=left, 1=Crout, 2=Right)
+1            # of broadcast
+2            BCASTs (0=1rg,1=1rM,2=2rg,3=2rM,4=Lng,5=LnM)
+1            # of lookahead depth
+0            DEPTHs (>=0)
+1            SWAP (0=bin-exch,1=long,2=mix)
+200          swapping threshold
+0            L1 in (0=transposed,1=no-transposed) form
+0            U  in (0=transposed,1=no-transposed) form
+1            Equilibration (0=no,1=yes)
+8            memory alignment in double (> 0)
+```
+
+*Why this file is needed:* `HPL.dat` is the sole configuration file read by the HPL executable; it defines the matrix size (N = 50000), block size (NB = 232), the 2 × 2 MPI process grid, and all algorithmic options required to run the benchmark on the Crux cluster. The benchmark will generate `HPL.out`, log files, and performance statistics at runtime.
+````

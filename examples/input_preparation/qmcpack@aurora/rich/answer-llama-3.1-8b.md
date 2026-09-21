@@ -1,0 +1,138 @@
+# llama-3.1-8b — qmcpack@aurora, rich arm
+
+Input preparation. **FAIL** (correctness 0/2, completeness 1/2, usability 0/2, fatal; 3 of 9 requirements violated).
+
+````
+### Parameters and configuration
+
+Based on the workload description, the following parameters and configuration are required for QMCPACK:
+
+* **Simulation cell**: A 2x2x2 supercell of the diamond structure, which corresponds to a 3x3x3 lattice of the primitive cell.
+* **Particle set**: 64 atoms of silicon (Si) in the diamond structure.
+* **Wavefunction**: Slater-Jastrow trial wavefunction from a prior DFT run.
+* **Hamiltonian**: Diffusion Monte Carlo (DMC) with a time step of 0.005 Ha⁻¹ and 200 DMC blocks.
+* **Walkers**: 4096 walkers.
+* **Pseudopotential**: A pseudopotential for silicon (Si) is required.
+
+### Input files
+
+#### `qmc.in.xml`
+
+```xml
+<?xml version="1.0"?>
+<simulation>
+   <project id="qmc" series="0">
+      <application name="qmcapp" role="molecu" class="serial" version="1.0"/>
+      <parameter name="driver_version">legacy</parameter>
+   </project>
+   <qmcsystem>
+      <simulationcell>
+         <parameter name="lattice" units="angstrom">
+            10.26 10.26 10.26
+            0.00 10.26 10.26
+            10.26 0.00 10.26
+         </parameter>
+         <parameter name="bconds">
+            p p p
+         </parameter>
+         <parameter name="LR_dim_cutoff"       >    15                 </parameter>
+      </simulationcell>
+      <particleset name="ion0">
+         <group name="Si" size="64" mass="28.0855">
+            <parameter name="charge"              >    4                     </parameter>
+            <parameter name="valence"             >    4                     </parameter>
+            <parameter name="atomicnumber"        >    14                    </parameter>
+            <parameter name="mass"                >    28.0855                </parameter>
+            <attrib name="position" datatype="posArray" condition="0">
+               0.00000000 0.00000000 0.00000000
+               2.61300000 2.61300000 2.61300000
+               5.22600000 5.22600000 5.22600000
+               8.83900000 8.83900000 8.83900000
+               1.61300000 0.00000000 0.00000000
+               3.22600000 3.22600000 3.22600000
+               6.83900000 6.83900000 6.83900000
+               9.45200000 9.45200000 9.45200000
+               0.00000000 1.61300000 0.00000000
+               2.61300000 3.22600000 2.61300000
+               5.22600000 6.83900000 5.22600000
+               8.83900000 9.45200000 8.83900000
+               1.61300000 1.61300000 0.00000000
+               3.22600000 3.22600000 3.22600000
+               6.83900000 6.83900000 6.83900000
+               9.45200000 9.45200000 9.45200000
+               0.00000000 0.00000000 1.61300000
+               2.61300000 2.61300000 3.22600000
+               5.22600000 5.22600000 6.83900000
+               8.83900000 8.83900000 9.45200000
+               1.61300000 1.61300000 1.61300000
+               3.22600000 3.22600000 3.22600000
+               6.83900000 6.83900000 6.83900000
+               9.45200000 9.45200000 9.45200000
+            </attrib>
+         </group>
+      </particleset>
+      <wavefunction name="psi0" target="ion0">
+         <slater name="slater">
+            <parameter name="nup"         >    32                    </parameter>
+            <parameter name="ndown"       >    32                    </parameter>
+         </slater>
+         <jastrow name="jastrow">
+            <parameter name="U"           >    0.5                    </parameter>
+            <parameter name="V"           >    0.5                    </parameter>
+         </jastrow>
+      </wavefunction>
+      <hamiltonian name="hamiltonian">
+         <parameter name="DMC"         >    yes                    </parameter>
+         <parameter name="DMC_blocks"  >    200                   </parameter>
+         <parameter name="DMC_tstep"   >    0.005                 </parameter>
+         <parameter name="DMC_walkers" >    4096                  </parameter>
+      </hamiltonian>
+   </qmcsystem>
+</simulation>
+```
+
+This file contains the simulation cell, particle set, wavefunction, and Hamiltonian parameters.
+
+*   **Needed:** This file defines the simulation cell, particle set, wavefunction, and Hamiltonian parameters for the QMCPACK simulation.
+
+#### `qmc.psf.xml` (optional)
+
+```xml
+<?xml version="1.0"?>
+<simulation>
+   <project id="qmc" series="0">
+      <application name="qmcapp" role="molecu" class="serial" version="1.0"/>
+      <parameter name="driver_version">legacy</parameter>
+   </project>
+   <qmcsystem>
+      <hamiltonian name="hamiltonian">
+         <ecp name="ecp">
+            <parameter name="Si"        >    Si.psf                 </parameter>
+         </ecp>
+      </hamiltonian>
+   </qmcsystem>
+</simulation>
+```
+
+This file contains the pseudopotential parameters.
+
+*   **Needed:** This file defines the pseudopotential parameters for the QMCPACK simulation.
+
+#### `qmc.psf` (optional)
+
+This file is generated by the `pw2qmcpack.x` converter from a prior DFT run.
+
+*   **Needed:** This file contains the pseudopotential parameters for the QMCPACK simulation.
+
+#### `qmc.h5` (built by the toolchain)
+
+This file is generated by the `pw2qmcpack.x` converter from a prior DFT run.
+
+*   **Needed:** This file contains the wavefunction parameters for the QMCPACK simulation.
+
+#### `qmc.scalar.dat` (produced at runtime)
+
+This file is generated by the QMCPACK application during the simulation.
+
+*   **Needed:** This file contains the scalar output from the QMCPACK simulation.
+````
