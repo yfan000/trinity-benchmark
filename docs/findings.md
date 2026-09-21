@@ -1,7 +1,10 @@
 # Findings
 
-Corpus v8, rubric r28, `gpt56terra` at k=3, majority of replicates. Reproduce any number here
-with `python -m audit.matrix` and its flags — none of them are typed in by hand.
+Corpus v8, rubric r28, `gpt56terra` at k=3, majority of replicates. Every number here is derived
+from the graded corpus rather than typed in, by `audit/matrix.py` — which is not in this
+repository but is in its history (`git checkout 77514d0 -- benchmark audit tools data`, then
+`python -m audit.matrix`). The per-answer evidence behind all of it is in
+[`examples/`](../examples/).
 
 ## The result
 
@@ -89,12 +92,13 @@ directives so the script does not submit, and 0 of 146 real scripts in the run a
 the call is a judgement, so it is priced rather than hidden:
 
 ```bash
-python -m audit.matrix --demote BATCH.common.no_directive_comments
+python -m audit.matrix --demote BATCH.common.no_directive_comments   # from commit 77514d0
 ```
 
 The first published version of this table applied that demotion silently while the YAML said
 `major`, and aggregated replicates as `floor(sum/3)` instead of by majority, reading 203/320 —
-a number no tool in this repository could produce. That is why `audit/matrix.py` exists.
+a number no tool could reproduce. That is why `audit/matrix.py` was written: one definition of
+the table, which the report renderer calls too.
 
 ## The prompt-enrichment A/B was null
 

@@ -1,7 +1,12 @@
 # How a grade is produced
 
-One answer, end to end. Everything here is code in this repository; where a step has a known
-weakness it is stated at that step rather than collected at the bottom.
+One answer, end to end. Where a step has a known weakness it is stated at that step rather than
+collected at the bottom.
+
+The module names below are the harness, which is **not in this repository** — it is in the
+history (`git checkout 77514d0 -- benchmark audit tools data`) and in the parent repository
+`llm-inference-benchmarks`. What ships here is what the harness produced: the rubric in
+`judge/skills/`, every graded answer in `examples/`, and the pages in `site/`.
 
 ## 1. An anchor
 
