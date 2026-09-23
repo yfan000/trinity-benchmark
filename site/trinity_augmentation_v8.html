@@ -1,0 +1,132 @@
+<!doctype html><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>What the prompt supplies</title>
+<style>
+:root{--ink:#14181d;--paper:#f6f7f8;--surface:#fff;--muted:#5d6673;--rule:#dfe3e8;
+ --accent:#0f6f6c;--warn:#b3261e;--ok:#1a6b3c;--mono:ui-monospace,Menlo,monospace;
+ --sans:system-ui,-apple-system,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ink:#e6eaef;--paper:#101418;
+ --surface:#171c22;--muted:#95a1b0;--rule:#2a323b;--accent:#4fd1c9;--warn:#ff8a80;--ok:#5fd08a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.6 var(--sans);
+ padding:40px 18px 90px}
+.w{max-width:860px;margin:0 auto}
+.kick{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:600}
+h1{font-size:27px;margin:6px 0 10px;letter-spacing:-.015em}
+.lede{color:var(--muted);max-width:68ch}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);
+ margin:40px 0 6px;font-weight:600}
+.big{display:flex;gap:26px;align-items:baseline;margin:22px 0 4px;flex-wrap:wrap}
+.big b{font:600 42px/1 var(--mono);color:var(--accent)}
+.big span{color:var(--muted);max-width:44ch}
+table{width:100%;border-collapse:collapse;margin:10px 0 4px;font-variant-numeric:tabular-nums}
+th{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);
+ text-align:right;padding:0 9px 8px;font-weight:600;vertical-align:bottom}
+th span{display:block;text-transform:none;letter-spacing:0;font-weight:400;font-size:10.5px;opacity:.8}
+tbody th{text-align:left;text-transform:none;font-size:14px;color:var(--ink);letter-spacing:0;
+ padding:8px 9px;font-weight:400}
+td{text-align:right;padding:8px 9px;border-top:1px solid var(--rule);font-family:var(--mono);
+ font-size:14px}
+td b{font-weight:600} td span{color:var(--muted);font-size:11.5px}
+tr.tot td,tr.tot th{border-top:2px solid var(--ink);font-weight:600}
+tr.hl td,tr.hl th{background:color-mix(in srgb,var(--accent) 8%,transparent)}
+td.d{color:var(--accent);font-weight:600}
+td.p{font-size:12.5px;color:var(--muted)}
+td.r{text-align:left;font-size:12px}
+td.c{text-align:left;font-size:11px}
+td.c.supplied{color:var(--warn)} td.c.knowledge{color:var(--ok)}
+table.hm td.cell{background:color-mix(in srgb,var(--accent) calc(var(--f)*42%),transparent);
+ text-align:center}
+table.hm td.cell b{display:block;font-size:13px;font-weight:600}
+table.hm td.cell span{font-size:11px;color:var(--muted)}
+td.why{text-align:left;font-size:11.5px;color:var(--muted);font-family:var(--sans)}
+td.why code{font-family:var(--mono);font-size:11px}
+.note{background:var(--surface);border:1px solid var(--rule);border-left:3px solid var(--accent);
+ border-radius:5px;padding:13px 16px;margin:14px 0;font-size:14px}
+.note b{display:block;margin-bottom:3px}
+.note.warn{border-left-color:var(--warn)}
+.meta{font-family:var(--mono);font-size:12px;color:var(--muted);border-top:1px solid var(--rule);
+ padding-top:12px;margin-top:38px}
+a{color:var(--accent)}
+</style>
+<div class="w">
+<div class="kick">Trinity benchmark &middot; augmentation ablation</div>
+<h1>What the prompt supplies, in pass-points</h1>
+<p class="lede">The published benchmark hands the model most of the facility knowledge the task is
+about: the installed-software list, the queue table, the required-file inventory, the module
+lines, a worked example. This strips that material away and re-runs the same items, so the score
+can be split into what the model knows and what we told it.</p>
+
+<div class="big"><b>+72</b>
+<span>of 160 items, the difference between <code>bare</code> and <code>rich</code> —
+27/160 (16%) unaugmented against
+99/160 (61%) with the current prompt.</span></div>
+
+<h2>Passes by stage — all 56 requirements</h2>
+<table><thead><tr><th style="text-align:left">stage</th><th>bare<br><span>no catalog, no example</span></th><th>rich<br><span>+ contracts, scaling</span></th><th>&Delta;</th></tr></thead>
+<tbody><tr><th>Software selection</th><td><b>16</b><span>/40</span></td><td><b>29</b><span>/40</span></td><td class='d'>+13</td></tr><tr><th>Input preparation</th><td><b>4</b><span>/40</span></td><td><b>10</b><span>/40</span></td><td class='d'>+6</td></tr><tr><th>Resource selection</th><td><b>6</b><span>/40</span></td><td><b>31</b><span>/40</span></td><td class='d'>+25</td></tr><tr><th>Batch job creation</th><td><b>1</b><span>/40</span></td><td><b>29</b><span>/40</span></td><td class='d'>+28</td></tr><tr class='tot'><th>all stages</th><td><b>27</b><span>/160</span></td><td><b>99</b><span>/160</span></td><td class='d'>+72</td></tr></tbody></table>
+
+<h2>Passes by stage — capability only</h2>
+<p class="lede">Restricted to requirements a model could satisfy without the catalog
+(<code>r29-capability</code>, registered before these answers existed). This separates
+<i>it does not know our queue names</i> from <i>it cannot write a valid deck</i>.</p>
+<table><thead><tr><th style="text-align:left">stage</th><th>bare<br><span>no catalog, no example</span></th><th>rich<br><span>+ contracts, scaling</span></th><th>&Delta;</th></tr></thead>
+<tbody><tr><th>Software selection</th><td><b>16</b><span>/40</span></td><td><b>29</b><span>/40</span></td><td class='d'>+13</td></tr><tr><th>Input preparation</th><td><b>4</b><span>/40</span></td><td><b>11</b><span>/40</span></td><td class='d'>+7</td></tr><tr><th>Resource selection</th><td><b>30</b><span>/40</span></td><td><b>35</b><span>/40</span></td><td class='d'>+5</td></tr><tr><th>Batch job creation</th><td><b>13</b><span>/40</span></td><td><b>29</b><span>/40</span></td><td class='d'>+16</td></tr><tr class='tot'><th>all stages</th><td><b>63</b><span>/160</span></td><td><b>104</b><span>/160</span></td><td class='d'>+41</td></tr></tbody></table>
+
+<div class="note"><b>Half the effect is information; half is not.</b>
+The gap narrows from 72 to
+41 points when the catalog-dependent rules are
+excluded, but it does not close. Resource selection is almost entirely information — it recovers
+once the queue-table rules come out. Batch job creation is not: without the site conventions and
+the worked script, the scripts are structurally worse, not merely factually wrong.</div>
+
+<h2>Which model is helped, and where — all requirements</h2>
+<p class="lede">Each cell is passes unaugmented &rarr; augmented, out of 10 attempts. Shading is
+the share of the cell the prompt is worth.</p>
+<table class="hm"><thead><tr><th style="text-align:left">model</th>
+<th>Software</th><th>Input</th><th>Resource</th><th>Batch</th><th>&Delta;</th></tr></thead>
+<tbody><tr><th>gemma-4-31b</th><td class="cell" style="--f:0.48"><b>5&rarr;8</b><span>+3</span></td><td class="cell" style="--f:0.16"><b>2&rarr;3</b><span>+1</span></td><td class="cell" style="--f:1.00"><b>2&rarr;9</b><span>+7</span></td><td class="cell" style="--f:1.00"><b>0&rarr;8</b><span>+8</span></td><td class="d">+19</td></tr><tr><th>gpt-oss-120b</th><td class="cell" style="--f:0.00"><b>4&rarr;4</b><span>+0</span></td><td class="cell" style="--f:0.48"><b>0&rarr;3</b><span>+3</span></td><td class="cell" style="--f:1.00"><b>1&rarr;10</b><span>+9</span></td><td class="cell" style="--f:0.80"><b>0&rarr;5</b><span>+5</span></td><td class="d">+17</td></tr><tr><th>llama-3.1-8b</th><td class="cell" style="--f:0.96"><b>3&rarr;9</b><span>+6</span></td><td class="cell" style="--f:0.00"><b>0&rarr;0</b><span>+0</span></td><td class="cell" style="--f:0.32"><b>1&rarr;3</b><span>+2</span></td><td class="cell" style="--f:0.96"><b>0&rarr;6</b><span>+6</span></td><td class="d">+14</td></tr><tr><th>nemotron-3-ultra</th><td class="cell" style="--f:0.64"><b>4&rarr;8</b><span>+4</span></td><td class="cell" style="--f:0.32"><b>2&rarr;4</b><span>+2</span></td><td class="cell" style="--f:1.00"><b>2&rarr;9</b><span>+7</span></td><td class="cell" style="--f:1.00"><b>1&rarr;10</b><span>+9</span></td><td class="d">+22</td></tr><tr class="tot"><th>all models</th><td class="d">+13</td><td class="d">+6</td><td class="d">+25</td><td class="d">+28</td><td class="d">+72</td></tr></tbody></table>
+
+<h2>The same grid, capability only</h2>
+<table class="hm"><thead><tr><th style="text-align:left">model</th>
+<th>Software</th><th>Input</th><th>Resource</th><th>Batch</th><th>&Delta;</th></tr></thead>
+<tbody><tr><th>gemma-4-31b</th><td class="cell" style="--f:0.48"><b>5&rarr;8</b><span>+3</span></td><td class="cell" style="--f:0.16"><b>2&rarr;3</b><span>+1</span></td><td class="cell" style="--f:0.00"><b>10&rarr;10</b><span>+0</span></td><td class="cell" style="--f:0.64"><b>4&rarr;8</b><span>+4</span></td><td class="d">+8</td></tr><tr><th>gpt-oss-120b</th><td class="cell" style="--f:0.00"><b>4&rarr;4</b><span>+0</span></td><td class="cell" style="--f:0.48"><b>0&rarr;3</b><span>+3</span></td><td class="cell" style="--f:0.96"><b>4&rarr;10</b><span>+6</span></td><td class="cell" style="--f:0.48"><b>2&rarr;5</b><span>+3</span></td><td class="d">+12</td></tr><tr><th>llama-3.1-8b</th><td class="cell" style="--f:0.96"><b>3&rarr;9</b><span>+6</span></td><td class="cell" style="--f:0.00"><b>0&rarr;0</b><span>+0</span></td><td class="cell" style="--f:0.00"><b>6&rarr;6</b><span>+0</span></td><td class="cell" style="--f:0.96"><b>0&rarr;6</b><span>+6</span></td><td class="d">+12</td></tr><tr><th>nemotron-3-ultra</th><td class="cell" style="--f:0.64"><b>4&rarr;8</b><span>+4</span></td><td class="cell" style="--f:0.48"><b>2&rarr;5</b><span>+3</span></td><td class="cell" style="--f:-0.16"><b>10&rarr;9</b><span>-1</span></td><td class="cell" style="--f:0.48"><b>7&rarr;10</b><span>+3</span></td><td class="d">+9</td></tr><tr class="tot"><th>all models</th><td class="d">+13</td><td class="d">+7</td><td class="d">+5</td><td class="d">+16</td><td class="d">+41</td></tr></tbody></table>
+
+<h2>What the prompt rescues, per model</h2>
+<table><thead><tr><th style="text-align:left">model</th><th>all rules</th><th>capability</th>
+<th style="text-align:left">requirements it stops violating (count across 3 replicates)</th></tr></thead>
+<tbody><tr><th>gemma-4-31b</th><td class="d">+19</td><td class="d">+8</td><td class="why"><code>common.filesystems_declared</code> &minus;24 &middot; <code>common.nodes_within_queue_limits</code> &minus;21 &middot; <code>common.queue_exists</code> &minus;18</td></tr><tr><th>gpt-oss-120b</th><td class="d">+17</td><td class="d">+12</td><td class="why"><code>common.filesystems_declared</code> &minus;24 &middot; <code>common.nodes_within_queue_limits</code> &minus;18 &middot; <code>common.no_fabricated_evidence</code> &minus;18</td></tr><tr><th>llama-3.1-8b</th><td class="d">+14</td><td class="d">+12</td><td class="why"><code>common.filesystems_declared</code> &minus;24 &middot; <code>common.select_declared</code> &minus;24 &middot; <code>common.all_required_files_present</code> &minus;22</td></tr><tr><th>nemotron-3-ultra</th><td class="d">+22</td><td class="d">+9</td><td class="why"><code>common.filesystems_declared</code> &minus;21 &middot; <code>common.ranks_match_build_defaults</code> &minus;21 &middot; <code>common.nodes_within_queue_limits</code> &minus;15</td></tr></tbody></table>
+
+<h2>Paired test — exact McNemar on pass/fail</h2>
+<table><thead><tr><th style="text-align:left">stratum</th><th>bare</th><th>rich</th>
+<th>&Delta;</th><th>gained</th><th>lost</th><th>exact p</th></tr></thead>
+<tbody><tr class=hl><th>all items</th><td>27</td><td>99</td><td class='d'>+72</td><td>75</td><td>3</td><td class='p'>5e-19</td></tr><tr><th>gemma-4-31b</th><td>9</td><td>28</td><td class='d'>+19</td><td>20</td><td>1</td><td class='p'>2e-05</td></tr><tr><th>gpt-oss-120b</th><td>5</td><td>22</td><td class='d'>+17</td><td>18</td><td>1</td><td class='p'>8e-05</td></tr><tr><th>llama-3.1-8b</th><td>4</td><td>18</td><td class='d'>+14</td><td>14</td><td>0</td><td class='p'>0.0001</td></tr><tr><th>nemotron-3-ultra</th><td>9</td><td>31</td><td class='d'>+22</td><td>23</td><td>1</td><td class='p'>3e-06</td></tr></tbody></table>
+<p class="lede">Every item is answered under both prompts by the same model, so the comparison is
+paired. Per-model rows are given because the 160 items are 40 anchors &times; 4 models and rows
+sharing an anchor share a prompt; pooling them and quoting one p-value would treat them as
+independent.</p>
+
+<h2>Which requirements moved</h2>
+<table><thead><tr><th style="text-align:left">requirement</th><th style="text-align:left">class</th>
+<th>bare</th><th>rich</th><th>&Delta;</th></tr></thead>
+<tbody><tr><td class='r'>BATCH.common.filesystems_declared</td><td class='c supplied'>supplied</td><td>93</td><td>0</td><td class='d'>-93</td></tr><tr><td class='r'>RES.common.nodes_within_queue_limits</td><td class='c supplied'>supplied</td><td>81</td><td>9</td><td class='d'>-72</td></tr><tr><td class='r'>RES.common.ranks_match_build_defaults</td><td class='c supplied'>supplied</td><td>80</td><td>11</td><td class='d'>-69</td></tr><tr><td class='r'>RES.common.queue_exists</td><td class='c supplied'>supplied</td><td>54</td><td>0</td><td class='d'>-54</td></tr><tr><td class='r'>RES.common.walltime_within_queue_limit</td><td class='c supplied'>supplied</td><td>60</td><td>12</td><td class='d'>-48</td></tr><tr><td class='r'>RES.common.allocation_matches_scaling_notes</td><td class='c supplied'>supplied</td><td>50</td><td>15</td><td class='d'>-35</td></tr><tr><td class='r'>INP.common.mandatory_sections_present</td><td class='c knowledge'>knowledge</td><td>68</td><td>33</td><td class='d'>-35</td></tr><tr><td class='r'>INP.common.file_identifiable</td><td class='c knowledge'>knowledge</td><td>41</td><td>7</td><td class='d'>-34</td></tr><tr><td class='r'>INP.common.all_required_files_present</td><td class='c supplied'>supplied</td><td>47</td><td>14</td><td class='d'>-33</td></tr><tr><td class='r'>BATCH.common.invokes_application</td><td class='c mixed'>mixed</td><td>45</td><td>12</td><td class='d'>-33</td></tr><tr><td class='r'>INP.common.no_invented_keywords</td><td class='c knowledge'>knowledge</td><td>61</td><td>34</td><td class='d'>-27</td></tr><tr><td class='r'>SOFT.common.claims_true_to_catalog</td><td class='c mixed'>mixed</td><td>36</td><td>11</td><td class='d'>-25</td></tr></tbody></table>
+<p class="lede">Violations across all three judge replicates. A score change that cannot name the
+rules behind it is not a finding.</p>
+
+<div class="note warn"><b>This comparison has no internal control.</b>
+In the base-vs-rich A/B, 120 of 160 items had byte-identical prompts and calibrated the noise
+floor. Here every item differs, so the noise floor is imported: the base/rich control moved 4 rows
+on identical prompts, and 20 of 320 cells flip between judge replicates. The effect here is an
+order of magnitude larger than either, but the absence should be stated rather than assumed
+away.</div>
+
+<div class="note"><b>One directive is worth 12 rows.</b>
+<code>BATCH.common.filesystems_declared</code> — the ALCF <code>#PBS -l filesystems=</code> line —
+is violated on 31 of 40 unaugmented Batch items and is fatal. Scored as minor, the unaugmented
+Batch stage recovers from 1/40 to 13/40. Several answers are otherwise correct scripts that omit
+exactly that line.</div>
+
+<p class="meta">corpus v8 &middot; collected under r27, scored under r28 &middot;
+gpt56terra, skill mode, k=3 &middot; every number regenerated by tools/build_result_page.py
+&middot; per-item evidence: <a href="trinity_bare_vs_rich_v8.html">trinity_bare_vs_rich_v8.html</a></p>
+</div>

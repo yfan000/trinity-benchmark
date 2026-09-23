@@ -63,6 +63,10 @@ td.low{color:var(--accent);font-weight:600}
 
   <h2>Read the write-up</h2>
   <div class="grid">
+    <a class="card" href="trinity_augmentation_v8.html"><b>What the prompt supplies</b>
+      <span>The augmentation ablation: strip the catalog material from the prompt and the same
+      corpus scores 27/160 instead of 99/160. Per model and per stage, with the capability-only
+      view beside it.</span><code>trinity_augmentation_v8.html</code></a>
     <a class="card" href="../docs/findings.md"><b>Findings</b>
       <span>The table with what it does and does not support: per-model and per-subtask failure
       patterns, the null A/B, the one severity call that moves the
@@ -84,6 +88,9 @@ td.low{color:var(--accent);font-weight:600}
     <a class="card" href="trinity_rules_v8.html"><b>Grading rules</b>
       <span>Every requirement applied to each sample: what decides it, where it came from, and
       the source YAML behind it.</span><code>trinity_rules_v8.html</code></a>
+    <a class="card" href="trinity_bare_vs_rich_v8.html"><b>Unaugmented vs augmented, per item</b>
+      <span>All 160 items: both prompts in full, both answers, and the judge's decision on every
+      requirement for each arm side by side.</span><code>trinity_bare_vs_rich_v8.html</code></a>
     <a class="card" href="trinity_arm_inspector_v8.html"><b>Prompt A/B inspector</b>
       <span>Both prompt arms per anchor with the catalog-enrichment diff
       highlighted.</span><code>trinity_arm_inspector_v8.html</code></a>

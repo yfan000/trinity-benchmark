@@ -53,6 +53,7 @@ examples/             ALL 320 GRADED ANSWERS, as markdown
 
 docs/
   findings.md           the result and what it does not support
+  augmentation.md       how much of the result is the prompt rather than the model
   methodology.md        how a grade was produced, step by step
   pipeline_design_note.md  the original design agreement, 2026-09-14
 
@@ -96,7 +97,9 @@ python -m audit.matrix                           # re-derives the table above, n
 python tools/build_examples.py                   # regenerates everything under examples/
 ```
 
-It also lives in the parent repository, `llm-inference-benchmarks`, under `skills/`.
+It also lives in the parent repository, `llm-inference-benchmarks`, under `skills/`. The
+augmentation ablation — the `bare` corpus, `benchmark/strip.py`, and the report generators — is on
+the **`experiment/augmentation-ablation`** branch, which carries the full harness.
 
 ## What this does not establish
 

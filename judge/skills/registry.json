@@ -1029,5 +1029,32 @@
     ]
    }
   ]
+ },
+ "r29-capability": {
+  "parent": "r28",
+  "created": "2026-09-23",
+  "files": {
+   "knowledge_dependence.yaml": "adfd35bc"
+  },
+  "rationale": "NOT a change to the requirements. A VIEW over r28 for the augmentation ablation: it partitions the 56 rules into 39 satisfiable from model knowledge, 11 that depend on a fact appearing only in the material the prompt injects, and 6 arguable. The unaugmented arms are graded under r28 in full; this view is a second aggregation of the same verdicts, so it costs no judge calls. It is registered BEFORE any unaugmented answer was collected, because a split invented after seeing the result is worthless. Every 'supplied' and 'mixed' entry carries the argument for its classification, which is the part a reviewer gets to attack.",
+  "changes": [
+   {
+    "op": "note",
+    "id": "knowledge_dependence.yaml",
+    "note": "39 knowledge / 11 supplied / 6 mixed, covering all 56 rules with no gaps. Resource selection is the most catalog-bound stage: 6 of its 10 rules are 'supplied'. RES.common.rank_layout_plausible is the clearest case in the library \u2014 its own source field reads 'prompt:machine specification', naming the block the ablation deletes.",
+    "motivated_by": [
+     "69% of current passes (136 of 198) satisfy at least one 'supplied' rule",
+     "forcing all 'supplied' rules violated floors the corpus at 31/160, all of it Software selection"
+    ]
+   },
+   {
+    "op": "note",
+    "id": "reporting caveat",
+    "note": "Restricted to 'knowledge', Software selection retains only names_one_application and no_vague_performance_claims and every model passes 10/10. The knowledge-only column is not interpretable for that stage alone; the mixed column must be shown beside it.",
+    "motivated_by": [
+     "base arm under knowledge-only scoring: 99 -> 101 of 160, i.e. the augmented arm barely moves, which is what makes it a usable noise control elsewhere"
+    ]
+   }
+  ]
  }
 }
