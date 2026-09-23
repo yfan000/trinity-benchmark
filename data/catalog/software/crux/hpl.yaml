@@ -1,0 +1,46 @@
+name: "HPL"
+description: "High Performance LINPACK benchmark (CPU-only build)"
+category: tool
+version: ""
+
+binary: "/eagle/datascience/hzheng/software/crux/hpl/bin/xhpl"
+install_path: "/eagle/datascience/hzheng/software/crux/hpl"
+
+modules: []
+
+setup:
+  - "module swap PrgEnv-cray PrgEnv-gnu"
+  - "module load cray-mpich"
+  - "module load cray-libsci"
+  - "export PATH=/eagle/datascience/hzheng/software/crux/hpl/bin:$PATH"
+
+gpu_support: false
+
+run_command: |
+  mpiexec -n 128 --ppn 128 xhpl
+
+input_files: ["HPL.dat"]
+
+keywords: ["benchmark", "LINPACK", "HPL", "HPC benchmark", "performance"]
+aliases: ["hpl", "xhpl", "linpack"]
+
+input_detection:
+  extensions: []
+  filenames: ["HPL.dat"]
+  content_markers: ["HPLinpack benchmark input file", "HPL.out"]
+
+defaults:
+  nodes: 1
+  walltime: 1800
+  queue: "workq"
+  ppn: 128
+
+scaling_notes: "CPU-only benchmark. Maximize performance by using all 128 cores per node. Tune N, NB, P, Q parameters in HPL.dat for Crux node memory (512 GB/node)."
+
+required_inputs: ["HPL.dat"]
+optional_inputs: []
+output_patterns: ["HPL.out", "*.log"]
+
+build_status: built
+
+notes: "CPU-only build with PrgEnv-gnu + cray-mpich + cray-libsci (provides optimized BLAS). HPL.dat must be tuned for Crux node memory and core count."

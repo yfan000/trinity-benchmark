@@ -1,0 +1,88 @@
+name: "OpenFold"
+description: "AlphaFold2 PyTorch reimplementation — Intel XPU port for Aurora/Sunspot (PVC)"
+category: bioinformatics
+version: "2.2.0"
+
+binary: "/lus/flare/projects/Aurora_deployment/hzheng/software/aurora/openfold/venv/bin/python"
+install_path: "/lus/flare/projects/Aurora_deployment/hzheng/software/aurora/openfold"
+build_status: built
+
+modules:
+  - frameworks
+
+setup:
+  - "module use /soft/modulefiles"
+  - "module load frameworks"
+  - "export PYTHONNOUSERSITE=1"
+  - "unset PYTHONPATH PYTHONHOME LD_PRELOAD"
+  - "source /lus/flare/projects/Aurora_deployment/hzheng/software/aurora/openfold/venv/bin/activate"
+
+gpu_support: true
+gpu_notes: |
+  Intel Data Center GPU Max 1550 (Ponte Vecchio). Use xpu:0 as device.
+  frameworks module provides torch 2.10 + IPEX 2.10 with XPU support.
+  Venv inherits XPU-enabled torch via --system-site-packages.
+
+run_command: |
+  python -c "
+  import sys, torch
+  import intel_extension_for_pytorch as ipex
+  device = torch.device('xpu:0')
+  # Mock CUDA kernel module (no CUDA on XPU)
+  class _Mock:
+      @staticmethod
+      def forward_(a, *args): a.copy_(torch.softmax(a.float(), dim=-1).to(a.dtype))
+  sys.modules['attn_core_inplace_cuda'] = _Mock()
+  # Redirect .cuda() -> .xpu()
+  def _xpu(self, *a, **kw): return self.to(device)
+  torch.Tensor.cuda = _xpu
+  from openfold.config import model_config
+  from openfold.model.model import AlphaFold
+  cfg = model_config('model_1', train=False, low_prec=True)
+  model = AlphaFold(cfg.model).to(device).eval()
+  # ... construct batch and run model(batch)
+  "
+
+smoke_command: |
+  qsub /Users/huihuo.zheng/Documents/Research/AmSC/agentic_workflows/jobs/aurora/build_openfold/smoke_xpu.sh
+
+install_notes: |
+  Installed on top of frameworks module (torch 2.10.0a0 XPU + IPEX 2.10.10).
+  Venv: --system-site-packages to inherit XPU torch without re-downloading.
+  Build script: jobs/aurora/build_openfold/run.sh
+  Smoke script: jobs/aurora/build_openfold/smoke_xpu.sh
+
+patches:
+  attn_core_cuda_mock:
+    description: "Mock attn_core_inplace_cuda via sys.modules before openfold import"
+    reason: "No CUDA on XPU; CppExtension fallback is built at install time (no GPU on login node)"
+
+  cuda_redirect:
+    description: "Patch torch.Tensor.cuda() to redirect to xpu:0"
+    reason: "OpenFold calls .cuda() in several places; IPEX handles most but explicit calls need redirection"
+
+  config_importlib_util:
+    description: "Add 'import importlib.util' after 'import importlib' in openfold/config.py"
+    reason: "Python 3.12: bare import importlib does not auto-load util submodule"
+
+  attention_core_einsum:
+    description: "Append einsum-based AttentionCore to attention_core.py with nested try/except for bias"
+    reason: |
+      PyTorch 2.10 strict: t[...,N] fails on 0-d tensors; chunk bias shape mismatch raises RuntimeError.
+      Nested try/except skips incompatible biases. See case_studies/openfold_xpu_port/report.md.
+
+defaults:
+  nodes: 1
+  walltime: 1200
+  queue: "debug"
+  account: "datascience"
+  ppn: 1
+
+keywords: ["OpenFold", "AlphaFold2", "protein structure", "XPU", "Intel GPU", "PVC", "Aurora", "bioinformatics"]
+aliases: ["openfold", "alphafold2", "protein-folding"]
+
+notes: |
+  Full port documented in case_studies/openfold_xpu_port/report.md.
+  15 autonomous iterations over ~3.5 hours resolved 7 compatibility failures.
+  Performance on Sunspot PVC: ~81 residues/sec (n=256, 3 recycling iters), 1.31 GB peak.
+  Ported to Frontier (ROCm) in 12 more iterations — see knowledgebase/hpc/lessons/port_openfold_sunspot_to_frontier.md.

@@ -1,0 +1,134 @@
+# OLCF Frontier — 9408-node AMD MI250X exascale system at Oak Ridge National Laboratory
+
+name: "Frontier"
+facility: "OLCF"
+description: "9408-node AMD MI250X exascale GPU system at Oak Ridge National Laboratory"
+
+software_build_dir: "/ccs/proj/csc708/hzheng/software/frontier"
+
+backend: "slurm"
+
+compute:
+  # OLCF IRI Facility API v0.4.3 on the moderate enclave.
+  # Verified 2026-05-12 against amsc-moderate.s3m.olcf.ornl.gov.
+  resource_id: "5173cdb4-d82f-5c81-8ef0-598997c12813"
+  api_base_url: "https://amsc-moderate.s3m.olcf.ornl.gov"
+
+# OLCF IRI server config for mcp__olcf-iri__* tools.
+# DESPITE the s3m.olcf.ornl.gov hostname, this is the IRI API
+# (paths /api/v1/facility, /api/v1/compute, /api/v1/status), NOT the
+# OPAT/Slurm S3M API used by Odo (see mcp/olcf_s3m_server.py).
+# Token: OLCF_IRI_TOKEN (manual refresh via myOLCF → Projects → API Tokens).
+# Token scope gating (verified 2026-05-12):
+#   * facility/status endpoints: any valid token works
+#   * compute submit/list/cancel: requires the compute scope; tokens
+#     issued without it return HTTP 401 on every /api/v1/compute/* path
+iri:
+  base_url: "https://amsc-moderate.s3m.olcf.ornl.gov"
+  api_version: "v0.4.3"
+  enclave: "moderate"
+  resources:
+    frontier:
+      id: "5173cdb4-d82f-5c81-8ef0-598997c12813"
+      type: "compute"
+      site_id: "963a7791-a4d7-5d74-848c-3935ff7492c9"
+  # No filesystem API on this enclave — use Globus DTN (UUID below) for file ops.
+
+storage:
+  orion:
+    resource_id: ""
+    mount_path: "/lustre/orion"
+    remote_base_path: "/csc708/scratch/hzheng"
+  home:
+    resource_id: ""
+    mount_path: "/ccs/home"
+    remote_base_path: "/hzheng"
+
+globus:
+  orion:
+    endpoint_id: "36d521b3-c182-4071-b7d5-91db5d380d42"  # OLCF DTN (Globus 5)
+    path_prefix: ""
+  home:
+    endpoint_id: "36d521b3-c182-4071-b7d5-91db5d380d42"  # same DTN serves both filesystems
+    path_prefix: ""
+  compute_endpoint_id: ""
+
+clearml:
+  queues:
+    frontier: "0146de71693a4727988afa0da05d88cd"
+    frontier-login: "2f7cc1fa2854413cae339123815f2a06"
+    frontier-services: "b71f2bdcdfa14d1ea7d7b0180157cc7b"
+    frontier-services-executor: "9671000d89f64d85a118a42fedd765e2"
+    frontier-persistent-compute: "972cfdce85a446cda7c60491e44a5bce"
+
+scheduler:
+  type: "slurm"
+  # Source: docs.olcf.ornl.gov Frontier user guide + ask_alcf (2026-05-09)
+  # No dedicated debug partition — use `debug` QOS (-q debug) with batch partition
+  queues:
+    batch:
+      min_nodes: 1
+      max_nodes: 9280
+      min_walltime: 0
+      max_walltime: 86400    # bin-based; smaller jobs get shorter max
+      per_user_eligible_to_run: 4
+      per_user_total_limit: 100  # across all partitions
+      notes: "Bin-based scheduling: node count determines max walltime bin. No explicit debug partition; add -q debug for 2hr high-priority slot."
+    debug:
+      max_walltime: 7200     # QOS class, not a partition; use with -p batch -q debug
+      max_jobs_per_user: 1
+      notes: "QOS flag (-q debug), not a partition. Add to batch jobs for higher priority. Production work prohibited."
+    extended:
+      min_nodes: 1
+      max_nodes: 64          # for smaller long-running jobs
+      min_walltime: 0
+      max_walltime: 86400    # 24 hours
+      per_user_running_limit: 1
+      per_user_eligible_to_run: 1
+      per_user_total_limit: 100
+      notes: "For long-running small jobs. Only 1 running + 1 eligible per user at a time."
+    g1:
+      min_nodes: 1
+      max_nodes: 2
+      min_walltime: 0
+      max_walltime: 7200     # unconfirmed; similar to debug
+      notes: "Small test partition; limits not fully documented."
+    service:
+      min_nodes: 1
+      max_nodes: 1
+      min_walltime: 0
+      max_walltime: 86400
+      notes: "Single-node service jobs."
+
+# Active Slurm reservations for csc708 on Frontier (refresh via `scontrol show reservations`).
+# Frontier uses the OLCF IRI API (not S3M) — pass reservation via the
+# scheduler args field on submit_job, e.g. {"scheduler_args": "--reservation=csc708-amsc-2"}
+# or include `#SBATCH --reservation=csc708-amsc-2` in the script body (IRI does NOT
+# drop script-body directives the way Odo's S3M does).
+reservations:
+  csc708-amsc-2:
+    nodes: 16
+    nodelist: "frontier[10177-10192]"
+    partition: "g1"
+    project: "csc708"
+    start_time: "2026-05-12T05:00:00"
+    end_time: "2026-05-14T17:00:00"
+    status: "active"
+    notes: "AmSC reservation (Anthony, 2026-05-12). 16 nodes on g1 partition; overrides the standard g1 max_nodes=2 cap."
+
+hardware:
+  nodes: 9408
+  gpus_per_node: 8    # 4 MI250X cards x 2 GCDs each
+  gpu_type: "MI250X"
+  cpus_per_node: 64
+  cpu_type: "AMD EPYC 7A53 (Zen 3)"
+  memory_per_node_gb: 512
+
+job_defaults:
+  shell: "#!/bin/bash"
+  nodes: 1
+  walltime: 1800
+  queue: "g1"      # AmSC reservation lives on g1; switch to "batch" for unreserved jobs
+  account: "csc708"
+  reservation: "csc708-amsc-2"   # see `reservations:` block — adds #SBATCH --reservation
+  ppn: 8

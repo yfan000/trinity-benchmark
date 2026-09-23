@@ -1,0 +1,200 @@
+name: "vLLM (Intel XPU, frameworks-shipped)"
+description: >
+  vLLM XPU inference on Aurora Intel PVC. The vllm bits ship inside the
+  Aurora `frameworks` module (currently 25.190.0): vllm 0.10.1rc2 XPU +
+  torch 2.8 in /input/frameworks/25.190.0/wheelhouse/. There is NO
+  per-user venv to activate — `module load frameworks` then use the
+  module's `python` directly. (Verified 2026-05-13 via IRI ls: neither
+  /home/hzheng/envs/vllm-aurora-xpu nor any
+  clearml_agent_setup/aurora/venvs/clearml/bin/python exists. The
+  jobs/aurora/mfi-serve-v[3-5]/run.sh scripts source those paths with
+  `|| true` — the activate is a no-op and python resolves to the
+  framework one. See memory feedback_aurora_user_venv_empty.md.)
+category: ml-framework
+version: "0.10.1rc2 XPU (via frameworks/25.190.0)"
+
+# Use the module-loaded python; do NOT cite a stable on-disk path.
+binary: "$(which python)  # after `module load frameworks`"
+
+# Alternate path used by gpt-oss-120b serve, on Flare project space.
+# CANNOT verify from MCP: Flare endpoint (UUID f39a7a0f-5bfc-46ce-9615-ba9f8592814f)
+# returns 409 Conflict from Globus (endpoint requires browser-flow consent first).
+# Trust the gpt-oss-120b serve script as the live reference; verify before first use.
+alt_binary: "/lus/flare/projects/Aurora_deployment/hzheng/clearml/alcf_clearml_deployment/bin/python  # used by jobs/aurora/gpt-oss-120b/serve.sh"
+
+build_status: shipped-with-module
+
+# ── MANDATORY ENV (ORDER MATTERS) ─────────────────────────────────────────
+
+setup:
+  # Step 1: outbound proxy (HF cache fetch / pip)
+  - "export http_proxy=http://proxy.alcf.anl.gov:3128"
+  - "export https_proxy=http://proxy.alcf.anl.gov:3128"
+  # Step 2: SYCL/oneCCL essential
+  - "export CCL_ZE_IPC_EXCHANGE=sockets       # required for >1 PVC tile via oneCCL"
+  # Step 3: load the framework module
+  - "module use /soft/modulefiles 2>/dev/null || true"
+  - "module load frameworks"
+  - "unset PYTHONPATH                          # MUST come AFTER `module load frameworks`"
+  - "unset PYTHONHOME"
+  - "export PYTHONNOUSERSITE=1                 # before any vllm import"
+  # Step 4: pick ONE device-visibility pattern (do not mix):
+  # 4a. Tile-aware (each PVC tile = 1 vLLM device; needed for gpt-oss-120b TP=12):
+  #   export ZES_ENABLE_SYSMAN=1
+  #   export SYCL_DEVICE_FILTER=ext_oneapi_level_zero:gpu
+  #   export IPEX_TILE_AS_DEVICE=1
+  # 4b. Composite (each PVC = 1 vLLM device; default mfi/serve_v3 path):
+  #   export ZE_FLAT_DEVICE_HIERARCHY=COMPOSITE
+  #   export IPEX_XPU_ONEDNN_LAYOUT=1
+  # Step 5: do NOT activate any user venv. Verified 2026-05-13 that the
+  # candidate user venvs under $HOME do not exist.
+  - "python -c 'import vllm, torch; print(\"vllm\", vllm.__version__, \"torch.xpu\", torch.xpu.is_available())'"
+
+gpu_support: true
+gpu_notes: |
+  Aurora node = 6× Intel PVC = 12 tiles total.
+  - With IPEX_TILE_AS_DEVICE=1, vLLM sees 12 devices (max TP=12).
+  - Without that var, vLLM sees 6 devices (max TP=6).
+  - With ZE_FLAT_DEVICE_HIERARCHY=COMPOSITE, vLLM sees 6 devices but the
+    framework dispatches both tiles per kernel (TP=4 mfi-serve path).
+
+  torch.xpu.device_count() reports the visible-device count under whichever
+  hierarchy is active.
+
+# ── KNOWN-GOOD vLLM FLAGS (XPU) ───────────────────────────────────────────
+
+run_command: |
+  python -m vllm.entrypoints.openai.api_server \
+      --model "$MODEL" \
+      --tensor-parallel-size 4 \
+      --distributed-executor-backend mp \
+      --host 0.0.0.0 --port 8000 \
+      --max-model-len 8192 \
+      --served-model-name "<served_name>" \
+      --dtype bfloat16 \
+      --enforce-eager
+      # NO --device xpu : auto-detected; current vLLM-XPU REJECTS the flag.
+      # NO --disable-log-requests : safe to omit (default off in 0.10.1+).
+
+# Per-model recommended TP / executor:
+#   llama-3.1-8b   : TP=4, mp executor, --enforce-eager           (validated mfi-serve-v5)
+#   gpt-oss-120b   : TP=12, mp executor, IPEX_TILE_AS_DEVICE=1    (validated, jobs/aurora/gpt-oss-120b)
+#   llama-3.1-70b  : TP=12, --max-model-len 4096, mp executor     (in progress)
+
+# ── HEAD PROXY PATTERN (single-job, multi-backend on one node) ────────────
+
+head_proxy_pattern: |
+  Reference: jobs/aurora/mfi-serve-v5/run.sh (validated 2026-05-12).
+
+  Pattern: launch vLLM in nohup on localhost:9000, then a tiny FastAPI
+  round-robin proxy on localhost:8000 routes /v1/* requests to one or more
+  vLLM backends. Lets a single PBS allocation expose ONE stable
+  client-facing port (8000) even when you scale to multiple vLLM instances
+  per node, and lets the same allocation also run a persistent
+  clearml-agent in the foreground for downstream inference tasks.
+
+  Skeleton (head node only when N>1, else any node):
+    nohup python -m vllm.entrypoints.openai.api_server \
+        --model "$MODEL" --tensor-parallel-size 4 \
+        --host 0.0.0.0 --port 9000 \
+        --served-model-name "$SERVED" \
+        --dtype bfloat16 --max-model-len 8192 --enforce-eager \
+        --distributed-executor-backend mp \
+        > /tmp/vllm.log 2>&1 &
+    # wait /health then /v1/models
+    nohup python head_proxy.py --backends localhost:9000 --port 8000 \
+        > /tmp/proxy.log 2>&1 &
+    clearml-agent daemon --queue aurora-persistent-compute --foreground
+
+# ── GOTCHAS ────────────────────────────────────────────────────────────────
+
+serving_lessons:
+  - id: no_user_venv_to_activate
+    severity: blocker
+    detail: |
+      Do NOT `source /home/hzheng/envs/vllm-aurora-xpu/bin/activate` —
+      that path does NOT exist (verified 2026-05-13 via IRI ls). The
+      mfi-serve-v[3-5] scripts wrap that line in `|| true`, so the
+      activate silently no-ops and python resolves to the framework
+      module's interpreter, which actually has vllm.
+      Correct pattern:
+          module use /soft/modulefiles
+          module load frameworks
+          unset PYTHONPATH PYTHONHOME
+          python -c 'import vllm; print(vllm.__version__)'
+  - id: device_xpu_flag_removed
+    severity: blocker
+    detail: |
+      `--device xpu` is rejected by current vLLM-XPU (argparse aborts).
+      Auto-detection works once XPU torch sees torch.xpu.is_available().
+      Drop the flag.
+      First failure: jobs/aurora/serve-llama-3.1-8b/serve_v2.sh.
+  - id: enforce_eager_required
+    severity: blocker
+    detail: |
+      Without --enforce-eager, vLLM tries to capture CUDA-graph-equivalent
+      SYCL kernels and either segfaults or hangs at engine init. ALWAYS pass.
+  - id: distributed_executor_mp
+    severity: blocker
+    detail: |
+      For TP > 1, --distributed-executor-backend mp is required. The default
+      ray executor hangs at engine init on XPU.
+  - id: pythonpath_unset_after_modules
+    severity: blocker
+    detail: |
+      `unset PYTHONPATH` MUST come AFTER `module load frameworks`. Otherwise
+      module-shipped torch/ipex/vllm get shadowed by user-site packages.
+  - id: proxy_required_for_outbound
+    severity: design
+    detail: |
+      Aurora compute nodes need http_proxy=http://proxy.alcf.anl.gov:3128
+      for HF download / pip install. DO NOT `unset http_proxy` like on Polaris;
+      Aurora's SquidProxy does NOT intercept localhost, so localhost:8000 still
+      works with the proxy set.
+  - id: cold_load_xpu
+    severity: timing
+    detail: |
+      Cold model load on XPU can take 20–90 minutes the first time
+      (SYCL kernel JIT). Subsequent runs from the same node hit the
+      JIT cache and warm-load in 2–5 minutes. Always size walltime to
+      90 min minimum for a never-served-on-this-host model.
+      mfi-serve-v5 wait loop budgets 540 × 10s.
+  - id: tile_as_device_for_high_tp
+    severity: design
+    detail: |
+      Default Aurora node exposes 6 PVCs. To run TP=12 (e.g.
+      gpt-oss-120b), set IPEX_TILE_AS_DEVICE=1 BEFORE python starts so
+      ipex/oneCCL splits each PVC into 2 tiles each addressed
+      individually. Don't mix this with ZE_FLAT_DEVICE_HIERARCHY=COMPOSITE
+      in the same shell; pick one.
+
+# ── SUBMISSION VIA CLEARML ─────────────────────────────────────────────────
+
+clearml_queue: "aurora-persistent-compute   # for the long-running serve+agent job"
+clearml_compute_queue: "aurora              # raw PBS allocation, no services-mode"
+
+defaults:
+  nodes: 1
+  ncpus: 208
+  ngpus: 6
+  walltime: 7200          # 2h; 90 min for cold load + buffer
+  queue: "debug-scaling   # or 'prod' for long-running"
+  account: "datascience   # or 'Aurora_deployment'"
+  filesystems: "home:flare"
+
+models:
+  - "/lus/flare/projects/Aurora_deployment/hzheng/models/llama-3.1-8b"
+  - "/lus/flare/projects/Aurora_deployment/hzheng/models/gpt-oss-120b"
+  - "/lus/flare/projects/Aurora_deployment/mumar/Meta-Llama-3.1-8B"
+
+# ── KEYWORDS ───────────────────────────────────────────────────────────────
+
+keywords: ["vLLM", "Intel XPU", "PVC", "SYCL", "oneCCL", "ipex", "Aurora", "LLM serving", "gpt-oss"]
+aliases: ["vllm", "vllm-aurora", "llm-serving"]
+
+references:
+  - "jobs/aurora/mfi-serve-v5/run.sh   # single-job head_proxy + agent"
+  - "jobs/aurora/gpt-oss-120b/serve.sh # TP=12, IPEX_TILE_AS_DEVICE=1"
+  - "jobs/aurora/serve-llama-3.1-8b/serve_v3.sh # serve_v3 baseline"
+  - "knowledgebase/hpc/lessons/aurora_pytorch_build.md"
+  - ".claude/memory/feedback_aurora_user_venv_empty.md"

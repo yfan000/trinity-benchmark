@@ -1,0 +1,43 @@
+name: "Nek5000"
+description: "Spectral element CFD solver - CPU MPI build on Aurora with Intel oneAPI compilers"
+category: simulation
+version: "v19.0"
+build_status: built
+
+binary: "/lus/flare/projects/datascience/hzheng/software/aurora/nek5000/Nek5000/bin/makenek"
+install_path: "/lus/flare/projects/datascience/hzheng/software/aurora/nek5000/Nek5000"
+
+modules:
+  - oneapi/release
+
+setup:
+  - "module use /soft/modulefiles"
+  - "module load oneapi/release"
+  - "unset PYTHONPATH"
+  - "export PATH=/lus/flare/projects/datascience/hzheng/software/aurora/nek5000/bin:$PATH"
+
+gpu_support: false
+gpu_notes: "CPU-only MPI build. GPU offload via NekRS (separate app)."
+
+run_command: |
+  mpiexec -n <nprocs> --ppn <ppn> ./nek5000 <casename>
+
+defaults:
+  nodes: 1
+  walltime: 1800
+  queue: "debug"
+  ppn: 104
+
+scaling_notes: "104 CPU cores per node on Aurora. Use all cores for CPU-only Nek5000 runs."
+
+keywords: ["spectral element", "CFD", "fluid dynamics", "turbulence", "Nek5000"]
+aliases: ["nek5000", "nek", "nekton"]
+
+required_inputs: [".rea", ".par", ".map", ".re2"]
+optional_inputs: []
+output_patterns: ["*.log", "*.fld", "*.his"]
+
+notes: |
+  Built with Intel oneAPI Fortran/C compilers (ifort/icx) on Aurora.
+  Nek5000 does not have native GPU support; use NekRS for GPU runs.
+  Build script: jobs/aurora/build_nek5000/run.sh

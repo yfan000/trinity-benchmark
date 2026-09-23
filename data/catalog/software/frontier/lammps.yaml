@@ -1,0 +1,16 @@
+app: lammps
+version: "stable_2Aug2023_update3"
+system: frontier
+status: installed
+binary: /ccs/proj/csc708/hzheng/software/frontier/lammps/bin/lmp
+install_prefix: /ccs/proj/csc708/hzheng/software/frontier/lammps
+built_date: "2026-04-29"
+
+modules:
+  - PrgEnv-gnu
+
+compilers:
+  CXX: CC
+
+binaries:
+  - bin/lmp

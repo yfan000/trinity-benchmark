@@ -1,0 +1,41 @@
+# PyTorch with MPI backend — built from source on Sophia
+name: "PyTorch (MPI)"
+description: "PyTorch 2.5.0a0 with MPI+NCCL distributed backends, built from source on Sophia"
+category: "ml-framework"
+version: "2.5.0a0+gita8d6afb"
+cuda_version: "12.4"
+
+binary: "/eagle/datascience/hzheng/software/sophia/pytorch-2.11-mpi/conda_env/bin/python"
+install_path: "/eagle/datascience/hzheng/software/sophia/pytorch-2.11-mpi/conda_env"
+conda_env: "/eagle/datascience/hzheng/software/sophia/pytorch-2.11-mpi/conda_env"
+
+setup: |
+  source /home/hzheng/clearml/miniconda3/etc/profile.d/conda.sh
+  conda activate /eagle/datascience/hzheng/software/sophia/pytorch-mpi/conda_env
+  export LD_LIBRARY_PATH=/usr/lib64:/usr/local/cuda/lib64:${LD_LIBRARY_PATH}
+
+gpu_support: true
+gpu_notes: |
+  CUDA 12.4, A100 (sm_80). MPI + NCCL + Gloo backends.
+  Use NCCL for GPU collectives (conda OpenMPI is not CUDA-aware).
+  LD_LIBRARY_PATH must include /usr/lib64 for libcuda.so on compute nodes.
+
+build_notes: |
+  Built via ClearML on sophia-login-01 (v13).
+  Key workarounds:
+  - CUDA/cuDNN/NCCL/OpenMPI from conda (system modules have dependency issues)
+  - Pin cuda-version=12.4 from nvidia channel (conda-forge pulls 13.x)
+  - CUDAHOSTCXX=/usr/bin/g++ (conda gcc 15 rejected by nvcc, system gcc 11.4 works)
+  - CMAKE_POLICY_VERSION_MINIMUM=3.5 (cmake 4.x compat for bundled protobuf)
+  - Explicit ${ENV_DIR}/bin/python paths (ClearML agent base Python 3.13 leaks in)
+
+run_command: |
+  # For GPU distributed training (recommended):
+  torchrun --nproc_per_node=8 train.py
+  # Or with MPI for CPU collectives:
+  mpirun -n 4 python train.py
+
+defaults:
+  nodes: 1
+  walltime: 3600
+  queue: "by-gpu"

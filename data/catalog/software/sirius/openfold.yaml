@@ -1,0 +1,57 @@
+name: "OpenFold"
+description: "AlphaFold2 PyTorch reimplementation on Sirius A100 (CUDA)"
+category: bioinformatics
+version: "2.2.0"
+
+binary: "/tmp/openfold_sirius_venv/bin/python"
+install_path: "/tmp/openfold_sirius_venv"
+build_status: built
+
+modules:
+  - conda
+
+setup:
+  - "module load conda"
+  - "conda activate"
+  - "source /tmp/openfold_sirius_venv/bin/activate"
+
+gpu_support: true
+gpu_notes: |
+  CUDA A100-SXM4-40GB. torch.cuda.is_available()=True.
+  Venv installed from git with CUDA support; no CUDA kernel mocking needed.
+
+run_command: |
+  python -c "
+  from openfold.config import model_config
+  from openfold.model.model import AlphaFold
+  import torch
+  device = 'cuda:0'
+  cfg = model_config('model_1', train=False, low_prec=True)
+  model = AlphaFold(cfg).to(device).eval()
+  # construct batch and run model(batch)
+  "
+
+smoke_command: |
+  bash /Users/huihuo.zheng/Documents/Research/AmSC/agentic_workflows/jobs/sirius/openfold_bench/run.sh
+
+install_notes: |
+  Installed via jobs/sirius/openfold_bench/run.sh (pip from git into /tmp venv).
+  Note: /tmp venv is node-local and ephemeral — recreated at job start if missing.
+  For a persistent install, move to /lus/tegu or Eagle-mounted path.
+
+patches: {}
+
+defaults:
+  nodes: 1
+  walltime: 1800
+  queue: "debug"
+  ppn: 1
+
+keywords: ["OpenFold", "AlphaFold2", "protein structure", "CUDA", "A100", "Sirius", "bioinformatics"]
+aliases: ["openfold", "alphafold2", "protein-folding"]
+
+notes: |
+  Standard CUDA path — no XPU/ROCm patches required.
+  Venv at /tmp is ephemeral; the bench script recreates it if absent.
+  A100 CUDA: no attn_core_inplace_cuda mocking needed (CUDA kernel builds correctly).
+  cuBLAS fix: purge cuda-12.9 from LD_LIBRARY_PATH before running if CUBLAS errors appear.

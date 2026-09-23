@@ -1,0 +1,179 @@
+# Which requirements can be satisfied WITHOUT the catalog material the prompt supplies.
+#
+# WHY THIS FILE EXISTS, AND WHY IT IS DATED BEFORE THE RUN. The augmentation ablation strips the
+# supplied facility knowledge from the prompt and grades the result with this same library. Some
+# requirements then become unsatisfiable not because the model is weak but because the fact was
+# withheld — the queue table, the module strings, the required-file list. Reporting only the
+# all-rules number invites the fair objection "you deleted the queue table and then graded them on
+# the queue table"; reporting only the knowledge-independent subset invites "you removed the rules
+# that decide". The paper reports both, so the split has to exist as data, and it has to exist
+# BEFORE the answers do. Written 2026-09-23, before a single answer was collected.
+#
+#   knowledge  a competent model could satisfy this from what it already knows
+#   supplied   satisfying it depends on a fact that appears only in the injected material
+#   mixed      arguable either way; always reported as its own column, never folded into either
+#
+# The `why` on every `supplied` and `mixed` entry is the argument a reviewer gets to attack. Where
+# a rule's own `source:` field names the prompt block the ablation deletes, that is quoted.
+
+rubric_id: r29-capability
+parent: r28
+created: "2026-09-23"
+counts: {knowledge: 39, supplied: 11, mixed: 6}
+
+caveats:
+  software_selection: >-
+    Restricted to `knowledge` this stage retains only names_one_application and
+    no_vague_performance_claims — a formatting check that every model passes. The two rules that
+    decide anything here are both `mixed`. The knowledge-only column is therefore not
+    interpretable for this stage on its own and must be shown with the mixed column beside it.
+  censoring: >-
+    Violation COUNTS understate the unaugmented arm: _queue_limit returns not_evaluated when the
+    named queue is absent from the catalog table, and _numeric_match when no defaults.ppn is
+    recorded. Both fire more often without the supplied blocks, so a bad queue costs one violation
+    rather than three. Use pass/fail as the endpoint, not violation counts.
+
+rules:
+
+  # ---------------------------------------------------------------- software selection
+  SOFT.common.names_one_application:      {class: knowledge}
+  SOFT.common.no_vague_performance_claims: {class: knowledge}
+  SOFT.common.correct_application:
+    class: mixed
+    why: >-
+      For most anchors the canonical code for the domain is also the installed one, so domain
+      knowledge often lands it. But the workload is deliberately generic: for a B3LYP single-point
+      energy a model may reasonably answer Gaussian or ORCA — correct science, not installed,
+      fatal here. Anchor-dependent.
+  SOFT.common.claims_true_to_catalog:
+    class: mixed
+    why: >-
+      Fires only on contradiction of a recorded field, so it is satisfiable by abstention. Models
+      do not abstain: 83% named the right application while only 22% were fully correct, the loss
+      being invented module names, versions and build provenance.
+
+  # ---------------------------------------------------------------- input preparation
+  INP.common.all_required_files_present:
+    class: supplied
+    why: >-
+      source is catalog:software/<system>/<app>.yaml#required_inputs, and the prompt hands it over
+      as a literal deliverable list. The inventory is not even a naive copy — _input_spec()
+      subtracts compiled artifacts because required_inputs records what the application CONSUMES,
+      not what a human WRITES, so an unaugmented model must reconstruct that distinction itself.
+  INP.common.mandatory_sections_present:  {class: knowledge}
+  INP.common.file_identifiable:           {class: knowledge}
+  INP.common.exact_filenames_used:
+    class: mixed
+    why: >-
+      That xhpl reads HPL.dat is textbook, and the rule applies only where the format contract sets
+      fixed_filenames — but the prompt also supplies those names. In play on 4 of 160 cells.
+  INP.common.no_output_as_input:
+    class: mixed
+    why: >-
+      That a .out is an output is domain knowledge, but the prompt spells out which files the run
+      produces and must not be authored.
+  INP.common.no_binary_contents:          {class: knowledge}
+  INP.common.no_truncation:               {class: knowledge}
+  INP.common.no_invented_keywords:        {class: knowledge}
+  INP.common.values_match_physical_system:
+    class: knowledge
+    why: >-
+      source is "prompt", and the workload block that states the physical system is KEPT in every
+      arm. This is the rule that makes the unaugmented arm gradeable at all.
+  INP.gromacs.tpr_not_authored:           {class: knowledge}
+  INP.gromacs.grompp_step_stated:         {class: knowledge}
+  INP.gromacs.mdp_keys_real:              {class: knowledge}
+  INP.gromacs.required_mdp_fields:        {class: knowledge}
+  INP.hpl.positional_format:              {class: knowledge}
+  INP.hpl.header_and_output_lines:        {class: knowledge}
+  INP.hpl.count_lines_match:              {class: knowledge}
+  INP.hpl.grid_matches_ranks:             {class: knowledge}
+  INP.qe.namelist_syntax:                 {class: knowledge}
+  INP.qe.required_namelists:              {class: knowledge}
+  INP.qe.required_cards:                  {class: knowledge}
+  INP.qe.nat_matches_positions:           {class: knowledge}
+  INP.qe.ntyp_matches_species:            {class: knowledge}
+  INP.qe.no_card_terminator:              {class: knowledge}
+  INP.qe.ibrav_consistent:                {class: knowledge}
+  INP.qe.pseudopotentials_plausible:      {class: knowledge}
+
+  # ---------------------------------------------------------------- resource selection
+  RES.common.queue_exists:
+    class: supplied
+    why: >-
+      Queue tables are not recallable. Sirius has exactly one queue, workq; Crux has workq-route,
+      not workq; Sophia has by-gpu/by-node/bigmem. `debug` — the obvious guess — exists on neither
+      Sirius nor Sophia.
+  RES.common.nodes_within_queue_limits:
+    class: supplied
+    why: >-
+      Not merely the names: Polaris prod has min_nodes 10, Aurora prod min_nodes 256. "4 nodes,
+      queue prod" on Polaris fails fatally on a limit no model can recall.
+  RES.common.walltime_within_queue_limit:
+    class: supplied
+    why: source is the per-queue walltime maximum in the system catalog.
+  RES.common.ranks_match_build_defaults:
+    class: supplied
+    why: >-
+      Compares the answer against defaults.ppn — a property of how THIS SITE built the code, not
+      of the application.
+  RES.common.rank_layout_plausible:
+    class: supplied
+    why: >-
+      Its own source field reads "prompt:machine specification" — it literally names the block the
+      unaugmented arm deletes. The cleanest case in the library.
+  RES.common.allocation_matches_scaling_notes:
+    class: supplied
+    why: >-
+      The claim says "the scaling guidance supplied with the application". Minor severity, so it
+      never blocks a pass.
+  RES.common.no_reservation_queue:        {class: knowledge}
+  RES.common.rank_arithmetic_consistent:  {class: knowledge}
+  RES.common.no_fabricated_evidence:      {class: knowledge}
+  RES.common.sizing_not_absurd:           {class: knowledge}
+
+  # ---------------------------------------------------------------- batch job creation
+  BATCH.common.filesystems_declared:
+    class: supplied
+    why: >-
+      "-l filesystems=" naming every filesystem touched, or the job is rejected or hangs. The
+      per-machine lists (home:eagle, home:flare) are handed over verbatim in the site conventions;
+      site.py calls these "facts an agent with no tools cannot discover".
+  BATCH.common.queue_exists:
+    class: supplied
+    why: >-
+      For this stage the queue name arrives via the carry-forward, not a queue table, so without
+      the supplied material the model must invent a legal queue with nothing to check against.
+  BATCH.common.no_placeholders:
+    class: supplied
+    why: >-
+      Measured coupling rather than a source field: withholding the account produced a correct
+      placeholder that the judge then marked unsubmittable. The same happens for module paths the
+      model cannot know. Fatal.
+  BATCH.common.correct_dialect:
+    class: supplied
+    why: >-
+      Conditional: the ablation KEEPS the scheduler name, so this stays satisfiable. Classed
+      supplied because it is satisfiable only through that retained fact — withholding it made 87
+      of 117 answers fail on this one point and drowned out everything else about script quality.
+  BATCH.common.invokes_application:
+    class: mixed
+    why: >-
+      Deliberately tolerant — basename, app name, alias, or .py for python frameworks — and a model
+      knows pw.x, lmp, gmx. But the catalog binary: line is supplied.
+  BATCH.common.inputs_reachable:
+    class: mixed
+    why: >-
+      A self-consistent invented filename normally satisfies it; the dependence is the
+      fixed-filename cases and the carry-forward filenames.
+  BATCH.common.walltime_declared:         {class: knowledge}
+  BATCH.common.queue_declared:            {class: knowledge}
+  BATCH.common.select_declared:           {class: knowledge}
+  BATCH.common.account_declared:          {class: knowledge}
+  BATCH.common.no_directive_comments:     {class: knowledge}
+  BATCH.slurm.walltime_declared:          {class: knowledge}
+  BATCH.slurm.account_declared:           {class: knowledge}
+  BATCH.slurm.queue_or_qos_declared:      {class: knowledge}
+  BATCH.slurm.nodes_declared:             {class: knowledge}
+  BATCH.slurm.no_directive_comments:      {class: knowledge}
+  BATCH.slurm.srun_launcher:              {class: knowledge}

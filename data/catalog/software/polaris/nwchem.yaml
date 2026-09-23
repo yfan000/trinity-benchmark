@@ -1,0 +1,54 @@
+name: "NWChem"
+description: "High-performance computational chemistry: HF, DFT, CCSD(T), MCSCF, MD"
+category: dft
+version: "7.2.2"
+
+binary: "/eagle/datascience/hzheng/software/polaris/nwchem/bin/nwchem"
+install_path: "/eagle/datascience/hzheng/software/polaris/nwchem"
+
+modules: []
+
+setup:
+  - "module load PrgEnv-gnu"
+  - "module swap gcc-native gcc-native/12.3"
+  - "module load cray-mpich"
+  - "export PATH=/eagle/datascience/hzheng/software/polaris/nwchem/bin:$PATH"
+  - "export NWCHEM_BASIS_LIBRARY=/eagle/datascience/hzheng/software/polaris/nwchem/share/nwchem/libraries/"
+  - "export NWCHEM_NWPW_LIBRARY=/eagle/datascience/hzheng/software/polaris/nwchem/share/nwchem/libraryps/"
+
+gpu_support: false
+gpu_notes: "CPU-only build. GPU support is experimental and not standard in community releases."
+
+run_command: |
+  mpiexec -n 16 --ppn 4 nwchem input.nw
+
+input_files: [".nw"]
+
+# --- Auto-detection ---
+keywords: ["nwchem", "quantum chemistry", "computational chemistry", "DFT", "CCSD", "TDDFT", "MP2", "Hartree-Fock", "HF", "NMR", "molecular dynamics", "excited states", "basis sets", "ab initio"]
+aliases: ["nwchem", "nwc"]
+
+input_detection:
+  extensions: [".nw", ".nwi"]
+  filenames: []
+  content_markers: ["start", "geometry", "basis", "dft", "task", "echo", "memory stack"]
+
+# --- Smart defaults ---
+defaults:
+  nodes: 1
+  walltime: 1800
+  queue: "debug"
+  ppn: 4
+
+scaling_notes: "4 MPI ranks per node. Scale nodes for larger molecular systems. GA (Global Arrays) library handles inter-node communication. Set memory stack/heap/global in input file to avoid OOM errors."
+
+# --- Input validation ---
+required_inputs: [".nw"]
+optional_inputs: [".db", ".movecs"]
+
+# --- Output retrieval ---
+output_patterns: ["*.out", "*.log", "*.db", "*.movecs", "*.cube"]
+
+notes: "Build from source with ARMCI-MPI for cray-mpich compatibility. Set USE_MPI=y, USE_MPIF4=y, FC=ftn, CC=cc. Basis library path must be set at runtime via NWCHEM_BASIS_LIBRARY."
+
+build_status: built

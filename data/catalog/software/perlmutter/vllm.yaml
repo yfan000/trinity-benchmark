@@ -1,0 +1,137 @@
+name: "vLLM"
+description: "High-throughput LLM inference server with PagedAttention and tensor parallelism"
+category: ml-framework
+version: "0.20.0"
+
+binary: "/pscratch/sd/h/hzheng/envs/vllm-perlmutter/bin/python"
+install_path: "/pscratch/sd/h/hzheng/envs/vllm-perlmutter"
+build_status: built
+
+# WORKING venv (verified 2026-05-12 Confab demo, jobs 52848654/657/659).
+# python is a symlink to /global/common/software/nersc/pe/conda-envs/26.1.0/python-3.13/nersc-python/bin/python
+#
+# WARNING: The CFS path /global/cfs/cdirs/dasrepo/hzheng/software/perlmutter/vllm_venv_v10
+# was migrated 2026-05-09 but its python interpreter was lost in the move — all vllm_venv_v*
+# directories under that CFS tree are NON-FUNCTIONAL. Do not use them.
+
+modules: []   # NO `module load python` needed — venv python lives outside
+
+setup:
+  - "unset CUDA_VISIBLE_DEVICES PYTHONPATH PYTHONHOME LD_PRELOAD"
+  - "source /pscratch/sd/h/hzheng/envs/vllm-perlmutter/bin/activate"
+  - "unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY"
+
+gpu_support: true
+gpu_notes: "CUDA GPU required (4× A100 per node). Tensor parallelism via NCCL. Built with torch 2.10.0 + cu12 stack (cublas/cudnn/nccl/cusparse), flashinfer, transformers."
+
+run_command: |
+  /pscratch/sd/h/hzheng/envs/vllm-perlmutter/bin/python -m vllm.entrypoints.openai.api_server \
+    --model <model_path> \
+    --tensor-parallel-size 4 \
+    --port 8000 \
+    --dtype bfloat16 \
+    --enforce-eager
+
+input_files: [".py"]
+
+# --- Auto-detection ---
+keywords: ["vLLM", "LLM inference", "language model serving", "PagedAttention", "tensor parallelism", "OpenAI API", "model serving"]
+aliases: ["vllm", "vllm-server", "vllm.entrypoints"]
+
+input_detection:
+  extensions: [".py"]
+  filenames: []
+  content_markers: ["from vllm", "import vllm", "vllm.entrypoints", "LLM(", "SamplingParams"]
+
+# --- Smart defaults ---
+defaults:
+  nodes: 1
+  walltime: 3600
+  queue: "debug"
+  constraint: "gpu"
+  account: "dasrepo"
+
+scaling_notes: "Single node up to 4 A100 GPUs with tensor parallelism. Multi-node requires pipeline parallelism. Use --tensor-parallel-size matching number of GPUs."
+
+# --- Available models on /pscratch ---
+models:
+  - "/pscratch/sd/h/hzheng/models/llama-3.1-8b"
+  - "/pscratch/sd/h/hzheng/models/deepseek-r1-7b"
+
+# --- Input validation ---
+required_inputs: []
+optional_inputs: [".py", "config.json"]
+
+# --- Output retrieval ---
+output_patterns: ["*.log", "benchmark_*.json"]
+
+build_notes: |
+  Rebuilt 2026-05-02 via jobs/perlmutter/build_vllm/run_v10.sh on perlmutter-services queue.
+  Standalone venv from `module load python` (no `--system-site-packages`).
+  Installed: vllm==0.20.0, torch==2.11.0+cu130, full bundled cu13 stack.
+  Build took 6m28s with PIP_CACHE_DIR=/pscratch and TMPDIR=/pscratch.
+  Iteration journey: v1-v8 covered 8 NERSC-specific failure modes (T-new-19..T-new-30):
+  MKL conflict, /global/homes quota, pip cache to /tmp size limit, login-shell re-exec,
+  pip self-upgrade trap (v9→v10 fix: skip `pip install --upgrade pip`).
+
+notes: |
+  Use the standalone venv at install_path. python is a symlink to nersc-python (3.13);
+  no `module load python` needed.
+  Account=amsc013 + qos=express_amsc verified working 2026-05-12 (Confab demo).
+  TP size MUST divide num_kv_heads — phi-4 has 10 KV heads (use TP=2, NOT TP=4).
+
+# IMPORTANT serving lessons (apply to ALL Perlmutter Slurm vLLM jobs).
+# Captured 2026-05-12 from the gpt-oss-120b boot+ask iter chain (52874614 -> 52874749 -> 52875197).
+serving_lessons:
+  - id: slurm_spool_workdir_trap
+    severity: blocker
+    detail: |
+      Slurm copies the submitted run.sh to /var/spool/slurmd/jobXXXXX/ before exec,
+      so `WORKDIR="$(cd "$(dirname "$0")" && pwd)"` resolves to that read-only
+      spool dir, not the scratch folder you uploaded to. Any redirected output
+      (e.g. SERVER_LOG="$WORKDIR/vllm_server_$JOBID.log") then hits "Permission
+      denied" and the vLLM background process is silently lost.
+      Fix: hardcode WORKDIR to the absolute scratch path you Globus'd to,
+      then `cd "$WORKDIR"`. Example:
+        WORKDIR=/pscratch/sd/h/hzheng/jobs/perlmutter/<jobname>/run_YYYY-MM-DD
+        cd "$WORKDIR"
+      First failure: job 52874614 (2026-05-12, exit 1, 9s).
+  - id: vllm_0_20_dropped_disable_log_requests
+    severity: blocker
+    detail: |
+      Perlmutter's vllm==0.20.0 venv removed --disable-log-requests; the flag is
+      now `--enable-log-requests` (default off). Passing the old flag aborts
+      api_server.py at argparse with `unrecognized arguments`. Polaris vllm
+      0.11.2 still warns rather than aborts, so this is a Perlmutter-specific
+      gotcha until both venvs converge. Fix: omit the flag entirely (default
+      = no per-request log spam), or pass --enable-log-requests when you
+      actually want them.
+      First failure: job 52874749 (2026-05-12, exit 1, 37s).
+  - id: served_name_match
+    severity: blocker
+    detail: |
+      Same rule as Polaris: the `model` field in /v1/* requests must equal
+      --served-model-name set at launch (here, gpt-oss-120b), not the HF repo.
+  - id: gpt_oss_mp_executor
+    severity: blocker
+    detail: |
+      gpt-oss family requires --distributed-executor-backend mp on Perlmutter
+      (per models/perlmutter/gpt-oss-120b.yaml -> notes). The default ray
+      executor hangs at engine init.
+  - id: localhost_only
+    severity: design
+    detail: |
+      Perlmutter compute nodes are firewalled. vLLM bound to 127.0.0.1:8000;
+      curl from inside the same Slurm job. There is no cross-job localhost on
+      NERSC -- different Slurm jobs land on different nodes. This is why the
+      "ClearML persistent-compute services-mode" pattern (used on Polaris)
+      cannot be replicated here, and why we run a single boot-+-ask job
+      that exits when done.
+  - id: gpt_oss_120b_cold_load
+    severity: timing
+    detail: |
+      Validated 2026-05-12 (job 52875197): cold load = 199s (199 s after the
+      Slurm script started until /v1/models returns 200) for gpt-oss-120b
+      (mxfp4, ~5.1B active params, 60 GB on disk) on 1 node x 4 A100 40GB
+      with TP=4 and max_model_len=16384. Subsequent chat completions return
+      in 1-3 s. Budget at least 5-7 min walltime overhead before useful work.

@@ -1,0 +1,125 @@
+name: "AlphaFold2"
+description: "DeepMind AlphaFold2 protein structure prediction from amino acid sequence"
+category: ml-framework
+version: "2.3.2"
+
+binary: "python"
+install_path: "/eagle/datascience/hzheng/software/polaris/alphafold"
+
+modules: []
+
+setup:
+  - "unset PYTHONPATH PYTHONHOME"
+  - "export PATH=/eagle/datascience/hzheng/software/polaris/alphafold/af2-env/bin:$PATH"
+  - "export ALPHAFOLD_DATA=/eagle/datasets/alphafold"
+
+gpu_support: true
+gpu_notes: |
+  GPU-accelerated structure prediction via JAX/XLA on NVIDIA A100 (sm_80).
+  Uses 1 GPU per prediction. JAX 0.4.26 + jaxlib 0.4.26+cuda12.cudnn89 (cuda12_pip wheel).
+  At least 40 GB VRAM needed for proteins beyond ~2000 residues — Polaris A100 80GB is fine.
+
+run_command: |
+  /eagle/datascience/hzheng/software/polaris/alphafold/af2-env/bin/python \
+    /eagle/datascience/hzheng/software/polaris/alphafold/run_alphafold.py \
+    --fasta_paths=input.fasta \
+    --output_dir=output \
+    --data_dir=/eagle/datasets/alphafold \
+    --uniref90_database_path=/eagle/datasets/alphafold/uniref90/uniref90.fasta \
+    --mgnify_database_path=/eagle/datasets/alphafold/mgnify/mgy_clusters_2022_05.fa \
+    --template_mmcif_dir=/eagle/datasets/alphafold/pdb_mmcif/mmcif_files \
+    --obsolete_pdbs_path=/eagle/datasets/alphafold/pdb_mmcif/obsolete.dat \
+    --pdb70_database_path=/eagle/datasets/alphafold/pdb70/pdb70 \
+    --uniref30_database_path=/eagle/datasets/alphafold/uniref30/UniRef30_2021_03 \
+    --bfd_database_path=/eagle/datasets/alphafold/bfd/bfd_metaclust_clu_complete_id30_c90_final_seq.sorted_opt \
+    --small_bfd_database_path=/eagle/datasets/alphafold/bfd/bfd-first_non_consensus_sequences.fasta \
+    --max_template_date=2022-01-01 \
+    --model_preset=monomer \
+    --db_preset=reduced_dbs \
+    --hhblits_binary_path=/eagle/datascience/hzheng/software/polaris/alphafold/af2-env/bin/hhblits \
+    --hhsearch_binary_path=/eagle/datascience/hzheng/software/polaris/alphafold/af2-env/bin/hhsearch \
+    --jackhmmer_binary_path=/eagle/datascience/hzheng/software/polaris/alphafold/af2-env/bin/jackhmmer \
+    --kalign_binary_path=/eagle/datascience/hzheng/software/polaris/alphafold/af2-env/bin/kalign \
+    --hmmsearch_binary_path=/eagle/datascience/hzheng/software/polaris/alphafold/af2-env/bin/hmmsearch \
+    --hmmbuild_binary_path=/eagle/datascience/hzheng/software/polaris/alphafold/af2-env/bin/hmmbuild
+
+input_files: [".fasta", ".fa"]
+
+# --- Auto-detection ---
+keywords: ["alphafold", "alphafold2", "protein structure prediction", "protein folding", "structural biology", "bioinformatics", "JAX", "MSA", "multiple sequence alignment", "template search", "CASP", "af2"]
+aliases: ["alphafold", "alphafold2", "af2", "alpha-fold"]
+
+input_detection:
+  extensions: [".fasta", ".fa", ".faa"]
+  filenames: ["input.fasta", "run_alphafold.py"]
+  content_markers: [">", "MAST", "MVLSE", "run_alphafold", "fasta_paths", "monomer"]
+
+# --- Smart defaults ---
+defaults:
+  nodes: 1
+  walltime: 1800
+  queue: "debug"
+  ppn: 1
+
+scaling_notes: "Single GPU per prediction; use 1 GPU (CUDA_VISIBLE_DEVICES=0) per run. For batch predictions, launch 4 independent processes each targeting a different GPU. Database files (~2.6 TB) live at /eagle/datasets/alphafold (shared, do NOT re-download). CPU-only MSA search (jackhmmer/hhblits) is the wall-time bottleneck — reduced_dbs preset trades MSA depth for speed."
+
+# --- Input validation ---
+required_inputs: [".fasta"]
+optional_inputs: []
+
+# --- Output retrieval ---
+output_patterns: ["output/*/ranked_*.pdb", "output/*/result_model_*.pkl", "output/*/timings.json"]
+
+# --- Database location (verified 2026-05-12; staged on Eagle) ---
+data_dir: "/eagle/datasets/alphafold"
+data_subdirs:
+  params: "params/"
+  bfd: "bfd/"
+  mgnify: "mgnify/mgy_clusters_2022_05.fa"
+  pdb70: "pdb70/"
+  pdb_mmcif: "pdb_mmcif/mmcif_files/"
+  obsolete_pdbs: "pdb_mmcif/obsolete.dat"
+  pdb_seqres: "pdb_seqres/"
+  uniprot: "uniprot/"
+  uniref30: "uniref30/UniRef30_2021_03"  # NB: uniref30, not uniclust30
+  uniref90: "uniref90/uniref90.fasta"
+  small_bfd: "bfd/bfd-first_non_consensus_sequences.fasta"
+  bfd_full: "bfd/bfd_metaclust_clu_complete_id30_c90_final_seq.sorted_opt"
+
+# --- Conda env + key versions ---
+conda_env: "/eagle/datascience/hzheng/software/polaris/alphafold/af2-env"
+key_versions:
+  python: "3.10.20"
+  jax: "0.4.26"
+  jaxlib: "0.4.26+cuda12.cudnn89"
+  openmm: "8.0"
+  hmmer: "3.4"
+  hhsuite: "3.3.0"
+  kalign2: "2.04"
+  dm-haiku: "0.0.12"
+  chex: "0.1.85"
+  numpy: "1.24.3"
+  tensorflow-cpu: "2.13.0"
+  protobuf: "3.20.3"
+  setuptools: "69.5.1"  # >=78 dropped pkg_resources used by alphafold
+
+notes: |
+  Built 2026-05-12 on polaris-services queue (login-node ClearML). 10 build iterations
+  needed to converge — see knowledgebase/hpc/lessons/polaris_alphafold_build.md for the
+  full failure-mode tour. Key non-obvious fixes:
+    1. hhsuite/kalign2 are on bioconda, not conda-forge.
+    2. tensorflow-cpu 2.13 needs protobuf >= 3.20.3 (not 3.20.1).
+    3. dm-haiku 0.0.9 + chex 0.0.7 (alphafold's pinned versions) call the removed
+       jax.linear_util attribute. Bump to dm-haiku 0.0.12 + chex 0.1.85, but then
+       force jax==0.4.26 jaxlib==0.4.26+cuda12.cudnn89 to keep alphafold compatible.
+    4. setuptools >= 78 dropped pkg_resources; pin to setuptools==69.5.1.
+    5. openmm 8 split out the simtk shim; alphafold.relax imports
+       `simtk.openmm.app.internal.pdbstructure` which lives at openmm.app.internal.
+       The pip `simtk` package only stubs simtk.openmm root, no .app.internal.
+       Patch the 3 alphafold relax/*.py files to use `from openmm` instead of
+       `from simtk.openmm` (sed -i 's/from simtk\.openmm/from openmm/g').
+
+build_status: "working"
+build_date: "2026-05-12"
+build_clearml_task: "06b8f8ee21a2477880cf9764fddbe6fd"
+smoke_iri_job: "7148807.polaris-pbs-01.hsn.cm.polaris.alcf.anl.gov"

@@ -1,0 +1,17 @@
+app: nwchem
+system: polaris
+version: "7.2.2 (CPU-only, PrgEnv-gnu + cray-mpich)"
+benchmark:
+  name: "H2O B3LYP/6-31G* single-point energy, 4 MPI ranks"
+  nodes: 1
+  gpus_per_node: 0
+  mpi_ranks: 4
+  walltime_s: 5
+  throughput: null
+  throughput_unit: "s/SCF iteration"
+  date: "2026-05-11"
+  job_script: "jobs/polaris/smoke_tests_genesis/nwchem/run_v2.sh"
+notes: |
+  Total DFT energy (H2O, B3LYP/6-31G*) = -76.406789805606 Ry. Verified.
+  GOTCHA: use -n 4 --ppn 4 (1 node), not -n 16 (needs 4 nodes).
+  Binary: /eagle/datascience/hzheng/software/polaris/nwchem/bin/nwchem

@@ -1,0 +1,43 @@
+name: "HACC (HACCabana)"
+description: "Hardware/Hybrid Accelerated Cosmology Code - HACCabana proxy with Kokkos SYCL backend on Aurora"
+category: simulation
+version: "latest"
+build_status: needs_build
+
+binary: ""  # fill in after build (CabanaPIC)
+install_path: "/lus/flare/projects/datascience/hzheng/software/aurora/hacc"
+
+modules:
+  - oneapi/release
+  - intel_compute_runtime
+  - cmake
+
+setup:
+  - "module use /soft/modulefiles"
+  - "module load oneapi/release"
+  - "module load intel_compute_runtime"
+  - "module load cmake"
+  - "unset PYTHONPATH"
+  - "export PATH=/lus/flare/projects/datascience/hzheng/software/aurora/hacc/bin:$PATH"
+
+gpu_support: true
+gpu_notes: "Intel Data Center GPU Max Series via Kokkos SYCL backend (Kokkos_ARCH_INTEL_PVC)"
+
+run_command: |
+  mpiexec -n 6 --ppn 6 CabanaPIC <input_params>
+
+defaults:
+  nodes: 1
+  walltime: 1800
+  queue: "debug"
+  ppn: 6
+
+scaling_notes: "6 Intel GPU tiles per node. Kokkos SYCL backend with DKokkos_ARCH_INTEL_PVC."
+
+keywords: ["cosmology", "N-body", "particle mesh", "HACC", "dark matter"]
+aliases: ["hacc", "haccabana", "CabanaPIC"]
+
+notes: |
+  Built using HACCabana (ECP Copa) with Kokkos 4.5.01 and Cabana 0.7.0.
+  Kokkos built separately with SYCL enabled, then Cabana, then HACCabana.
+  Build script: jobs/aurora/build_hacc/run.sh

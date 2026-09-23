@@ -1,0 +1,49 @@
+name: "NAMD"
+description: "Scalable molecular dynamics for large biomolecular systems"
+category: simulation
+version: "3.0"
+
+binary: "namd3"
+install_path: ""   # fill in path
+
+modules: []
+
+setup:
+  - "module reset"
+  - "module load namd"   # verify: module avail namd
+
+gpu_support: true
+gpu_notes: "Native CUDA GPU offload; resident kernel for bonded forces on GPU"
+
+run_command: |
+  srun -n 4 namd3 +p16 +setcpuaffinity +devices 0,1,2,3 input.namd
+
+input_files: [".namd", ".conf"]
+
+# --- Auto-detection ---
+keywords: ["molecular dynamics", "biomolecular", "protein folding", "NAMD", "MD simulation"]
+aliases: ["namd", "namd2", "namd3"]
+
+input_detection:
+  extensions: [".namd", ".conf"]
+  filenames: []
+  content_markers: ["structure", "coordinates", "outputName", "numsteps"]
+
+# --- Smart defaults ---
+defaults:
+  nodes: 1
+  walltime: 3600
+  queue: "debug"
+  constraint: "gpu"
+  account: "dasrepo"
+
+scaling_notes: "Use +p<threads> to control CPU threads per GPU. Scale across nodes with SMP build."
+
+# --- Input validation ---
+required_inputs: [".namd", ".conf"]
+optional_inputs: [".psf", ".pdb", ".coor", ".vel", ".xsc"]
+
+# --- Output retrieval ---
+output_patterns: ["*.dcd", "*.log", "*.coor", "*.vel", "*.xsc"]
+
+notes: "Verify module name and binary path. Check: module avail namd"

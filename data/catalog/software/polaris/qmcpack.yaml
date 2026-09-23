@@ -1,0 +1,194 @@
+name: "QMCPack"
+description: "Open-source production-level many-body ab initio Quantum Monte Carlo code"
+category: "simulation"
+version: "v4.2.0"
+
+binary: "/eagle/datascience/hzheng/software/qmcpack/v4.2.0/bin/qmcpack"
+install_path: "/eagle/datascience/hzheng/software/qmcpack/v4.2.0"
+
+# ── Module environment ─────────────────────────────────────────────────────────
+# CRITICAL ordering: PrgEnv-gnu first (provides cray-mpich prerequisite),
+# then llvm/19.1.7 BEFORE spack-pe-base/cray-hdf5-parallel.
+# Do NOT load mpiwrappers/cray-mpich-llvm — it silently upgrades
+# llvm/19.1.7 → 22.1.4, crashing QMCPack (links libomp.so from NVHPC 25.5).
+# Use PrgEnv-gnu's native cray-mpich for mpiexec instead.
+modules:
+  - PrgEnv-gnu
+  - spack-pe-base
+  - llvm/release-19.1.7
+  - cudatoolkit-standalone/12.3.2
+  - craype-x86-milan
+  - cray-fftw
+  - cray-hdf5-parallel
+
+setup:
+  # DO NOT `module purge` then load these modules — `module purge` strips the
+  # Cray PE and the next `module load PrgEnv-gnu` fails with
+  # "Lmod has detected the following error: gnu unknown".
+  # If switching from a previous PrgEnv (e.g. after running QE which loaded
+  # PrgEnv-nvhpc), use `module swap PrgEnv-nvhpc PrgEnv-gnu` and then load the
+  # remaining modules (spack-pe-base, llvm/release-19.1.7, …).
+  - "export BOOST_ROOT=/soft/applications/qmcpack/boost_1_86_0"
+  - "export CMAKE_PREFIX_PATH=/soft/libraries/openblas/0.3.20-omp:$CMAKE_PREFIX_PATH"
+  - "export OMP_NUM_THREADS=8"
+  - "export OMP_PLACES=threads"
+  # QMCPack links libomp.so from NVIDIA HPC SDK 25.5 via RPATH.
+  # DO NOT set nvhpc 24.11 LD_LIBRARY_PATH here — it loads the wrong libomp.so
+  # and causes an immediate SIGSEGV. This is only needed for QE, not QMCPack.
+
+gpu_support: true
+gpu_notes: "CUDA via sm_80 (A100), mixed-precision float/double enabled"
+
+run_command: |
+  # IMPORTANT: pw2qmcpack v7.5 writes <prefix>.ptcl.xml, <prefix>.wfs.xml,
+  # <prefix>.pwscf.h5 to the QE OUTDIR root (e.g. mol.outdir/),
+  # NOT to mol.outdir/mol.save/. Run QMCPack from mol.outdir/ so the
+  # <include href="...ptcl.xml"/> hrefs in input.xml resolve.
+  # 4 MPI ranks × 1 GPU each; OMP threads fill the CPUs.
+  cd $WORKDIR/mol.outdir && \
+  mpiexec -n 4 --ppn 4 --depth=8 --cpu-bind=depth \
+    --env OMP_NUM_THREADS=8 --env OMP_PLACES=threads \
+    /eagle/datascience/hzheng/software/qmcpack/v4.2.0/bin/qmcpack input.xml \
+    2>&1 | tee output.qmc.out
+
+input_files: [".xml"]
+
+keywords: ["quantum monte carlo", "QMC", "electronic structure", "many-body", "DMC", "VMC"]
+aliases: ["qmcpack", "qmc"]
+
+input_detection:
+  extensions: [".xml"]
+  content_markers: ["<qmcsystem", "<simulationcell", "<wavefunction"]
+
+defaults:
+  nodes: 1
+  walltime: 3600
+  queue: "debug"
+  ppn: 4
+
+scaling_notes: "4 MPI ranks per node (1 per A100). OMP_NUM_THREADS=8 fills CPUs."
+
+required_inputs: ["input.xml"]
+optional_inputs: []
+
+output_patterns: ["*.scalar.dat", "*.stat.h5", "*.cont.xml", "*.info.xml"]
+
+# ── Polaris-specific gotchas (learned from water formation energy run) ─────────
+notes: |
+  BINARY: v4.2.0 mixed-precision (float SPO, double accumulation). Full QMCPack
+  feature set except linear_batch optimizer (see below).
+
+  JASTROW OPTIMIZATION — DEFAULT is method="descent" (Adam SGD):
+    Use method="descent" for all systems unless user explicitly requests "linear"
+    or system requires CASSCF multi-det CI coefficient optimization.
+    linear_batch (method="linear") is DISABLED on this mixed-precision build.
+    Descent XML:
+      <qmc method="descent" move="pbyp" gpu="yes">
+        <parameter name="samples">16384</parameter>
+        <parameter name="blocks">2000</parameter>
+        <parameter name="stepsbetweensamples">1</parameter>
+        <parameter name="flavor">Adam</parameter>
+        <parameter name="stepsize">0.01</parameter>
+        <parameter name="b1">0.9</parameter><parameter name="b2">0.999</parameter>
+        <cost name="energy">0.0</cost><cost name="reweightedvariance">1.0</cost>
+      </qmc>
+
+  QE INTERFACE (pw2qmcpack):
+    - Use K_POINTS automatic 1 1 1 0 0 0 (NOT K_POINTS gamma — gamma trick
+      uses reduced G-space that pw2qmcpack cannot convert).
+    - pw2qmcpack v7.5 writes <prefix>.ptcl.xml, <prefix>.wfs.xml, and
+      <prefix>.pwscf.h5 to the QE OUTDIR root (e.g. mol.outdir/), NOT to
+      mol.outdir/mol.save/. (Earlier docs said .save/; that was wrong for QE 7.5.)
+      The .save/ subdir contains charge-density.dat, wfc1.dat, data-file-schema.xml
+      from pw.x — pw2qmcpack reads from .save/ but writes one level up.
+      → Run QMCPack from mol.outdir/ so the <include href="<prefix>.ptcl.xml"/>
+        hrefs in input.xml resolve. Verified failure: Confab demo H2O/H2/O2 jobs
+        7151046/7/8 (2026-05-12) — looking for ptcl.xml in .save/ → FileNotFound.
+    - QE 7.5 pw2qmcpack auto-adds J1+J2 Jastrow templates (zero coefficients)
+      to wfs.xml — no manual add_jastrow step needed.
+    - ECP XML files (.xml, for QMCPack) are different from UPF files (for QE).
+      Download both formats before submitting — compute nodes have no internet.
+
+  SINGLE-SPIN SYSTEMS (H₂, He, 1↑+1↓):
+    Remove uu and dd same-spin J2 correlations from wfs.xml before running.
+    uu requires ≥2 same-spin electrons; triggers Fatal Error otherwise.
+    Fix: remove <correlation speciesA="u" speciesB="u"> from J2 Jastrow block.
+
+  MOLECULAR BC — when bconds="n n n" you MUST also add explicit Jastrow rcut:
+    Under open BC there is no cell to derive the cutoff from, so QMCPack aborts
+    with: "Fatal Error. Aborting at Jastrow cutoff unspecified. Cutoff must
+    be given when using open boundary conditions" before the first VMC step.
+    Add `rcut="N.N"` (in bohr) to every <correlation> tag inside the J1 and J2
+    <jastrow> blocks of <prefix>.wfs.xml. Choose rcut < min(box dims)/2;
+    a 20 Å cubic box (37.79 bohr) safely uses rcut=6.0. Verified failure:
+    Confab demo H2O/H2/O2 jobs 7151066/7/8 (2026-05-12).
+
+  MOLECULAR BC — bconds MUST be "n n n" (open), not pw2qmcpack default "p p p":
+    pw2qmcpack copies QE's periodic BC into mol.ptcl.xml as bconds="p p p".
+    For an isolated molecule in a vacuum box this triggers Ewald summation
+    in vacuum and QMCPack segfaults BEFORE printing any banner — qmcpack.out
+    contains only "rank N died from signal 11 and dumped core".
+    Fix in any XML-builder script after copying simulationcell from ptcl.xml:
+      for sc in sim.iter("simulationcell"):
+          for p in sc.findall("parameter"):
+              if p.get("name") == "bconds":
+                  p.text = "n n n"
+    Required for every molecule (H2, H atom, H2O, O2, …); skip only for solids.
+    Diagnostic: empty qmcpack.out + rank-death message → suspect bconds first.
+
+  LD_LIBRARY_PATH:
+    QMCPack links libomp.so via RPATH from /opt/nvidia/hpc_sdk/Linux_x86_64/25.5/.
+    If you prepend nvhpc 24.11 to LD_LIBRARY_PATH (needed for QE), do it ONLY
+    within the QE/pw2qmcpack mpiexec invocation, not globally. Apply like:
+      LD_LIBRARY_PATH=/soft/compilers/nvhpc/Linux_x86_64/24.11/...:$BASE_LD \
+      mpiexec ... pw.x ...
+
+  IRI SUBMISSION:
+    Submit as: executable=/bin/bash, arguments=-l,/path/to/run.sh
+    The -l flag is required for login shell (module command availability).
+
+  PSEUDOPOTENTIALS (ccECP):
+    UPF  (QE):      H.ccECP.upf, O.ccECP.upf
+    XML  (QMCPack): H.ccECP.xml, O.ccECP.xml
+    Download from pseudopotentiallibrary.org BEFORE submitting.
+    Transfer to Eagle via Globus (compute nodes have no internet).
+
+  CONVERT4QMC — broken in two ways on Polaris; PREFER bypassing it entirely:
+    convert4qmc v4.2.0 on Polaris has TWO independent bugs validated
+    2026-05-12 (jobs 7152597 + 7152893):
+
+    Bug 1 — SIGSEGV without mpiexec wrap. The binary is built as MPI; bare
+            invocation finds PMI env vars from PBS but no launcher → crashes
+            in MPI_Init / Boost ctors with a 10–20 MB core dump. Reproduced
+            on both login and compute nodes.
+    Bug 2 — Malformed structure.xml even with `mpiexec -n 1` wrap. Ion
+            <group> blocks lack the required `size=` attribute (positions
+            stranded outside the group block as a separate <attrib>), and
+            the empty down-spin <group name="d" size="0">...</group> is in
+            multi-line block form (not self-closing, so simple regex
+            strippers miss it). QMCPack aborts with: "'group' XML element
+            node doesn't contain a 'size' attribute / 'size = 0' is not
+            allowed in the input."
+
+    PRIMARY FIX — bypass convert4qmc entirely (recommended for all Polaris
+    QMC workflows, simpler and Polaris-bug-proof). Write .structure.xml +
+    .wfnoj.xml + master qmc.in.xml directly in Python after
+    savetoqmcpack(mol, mf, prefix). The non-obvious bit is the mandatory
+    <coefficient size="N_basis"> element on each <determinant> (without
+    it, QMCPack treats LCAO transform as Identity → "OrbitalSetSize !=
+    BasisSetSize" crash). Working template:
+    jobs/polaris/h2_atomization_qmc/pyscf_setup.py
+    Validated end-to-end H₂ atomization energy = 4.7347 ± 0.017 eV vs
+    experimental D_e = 4.747 eV (jobs 7152666 + 7152667).
+
+    FALLBACK — only if convert4qmc is genuinely needed (CASSCF / multi-
+    determinant trial wavefunction where reproducing the basis-set
+    decoding in Python is hard):
+      mpiexec -n 1 \
+        /eagle/datascience/hzheng/software/qmcpack/v4.2.0/bin/convert4qmc \
+        -orbitals mol.h5 -psi_tag psi0 -ion_tag ion0 -prefix mol -nojastrow
+    Then post-process structure.xml to add `size=N` to ion groups and
+    strip multi-line `<group ... size="0">...</group>` blocks.
+
+    Aurora / Frontier untested — same bypass-convert4qmc pattern applies
+    cleanly there too (no Polaris-specific assumption).

@@ -1,0 +1,53 @@
+name: "CP2K"
+description: "Quantum chemistry and molecular dynamics code with Intel oneAPI compilers on Aurora"
+category: dft
+version: "2024.1"
+build_status: installed
+
+binary: "/lus/flare/projects/datascience/hzheng/software/aurora/cp2k/bin/cp2k.psmp"
+install_path: "/lus/flare/projects/datascience/hzheng/software/aurora/cp2k"
+
+modules:
+  - oneapi/release
+  - intel_compute_runtime
+  - cmake
+
+setup:
+  - "module use /soft/modulefiles"
+  - "module load oneapi/release"
+  - "module load intel_compute_runtime"
+  - "module load cmake"
+  - "unset PYTHONPATH"
+  - "export PATH=/lus/flare/projects/datascience/hzheng/software/aurora/cp2k/bin:$PATH"
+
+gpu_support: false
+gpu_notes: "CPU-only MPI build with Intel MKL + ScaLAPACK. Intel GPU offload not yet mainstream in CP2K."
+
+run_command: |
+  mpiexec -n <nprocs> --ppn <ppn> cp2k.psmp -i input.inp -o output.out
+
+defaults:
+  nodes: 1
+  walltime: 3600
+  queue: "debug"
+  ppn: 104
+
+scaling_notes: "104 CPU cores per Sapphire Rapids node. CP2K scales well with OpenMP+MPI hybrid."
+
+keywords: ["DFT", "density functional theory", "molecular dynamics", "AIMD", "CP2K", "force field"]
+aliases: ["cp2k", "cp2k.psmp", "cp2k.popt"]
+
+input_detection:
+  extensions: [".inp"]
+  content_markers: ["&GLOBAL", "&FORCE_EVAL", "&DFT"]
+
+required_inputs: [".inp"]
+optional_inputs: [".restart", ".wfn"]
+output_patterns: ["*.out", "*.xyz", "*.restart"]
+
+install_notes: "Built 2026-05-10 with Intel oneAPI. cmake+make cp2k target only (skips C miniapps). v35 resume install after v34 hit 15-min wall-clock."
+
+notes: |
+  Built with Intel oneAPI (ifx/icx) + MPICH + Intel MKL on Aurora.
+  Uses Intel MKL-ScaLAPACK for parallel linear algebra.
+  Build script: jobs/aurora/build_cp2k/run.sh

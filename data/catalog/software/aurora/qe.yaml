@@ -1,0 +1,53 @@
+name: "Quantum ESPRESSO"
+description: "Plane-wave DFT code for electronic structure calculations on Aurora with Intel oneAPI"
+category: dft
+version: "7.4"
+build_status: installed
+
+binary: "/lus/flare/projects/datascience/hzheng/software/aurora/qe/7.4/bin/pw.x"
+install_path: "/lus/flare/projects/datascience/hzheng/software/aurora/qe/7.4"
+
+modules:
+  - oneapi/release
+  - intel_compute_runtime
+  - cmake
+
+setup:
+  - "module use /soft/modulefiles"
+  - "module load oneapi/release"
+  - "module load intel_compute_runtime"
+  - "module load cmake"
+  - "unset PYTHONPATH"
+  - "export PATH=/lus/flare/projects/datascience/hzheng/software/aurora/qe/7.4/bin:$PATH"
+
+gpu_support: false
+gpu_notes: "CPU-only MPI build (Intel MKL FFT). GPU offload via pw_gpu requires NVIDIA; Aurora uses Intel GPUs."
+
+run_command: |
+  PW_X=/lus/flare/projects/datascience/hzheng/software/aurora/qe/7.4/bin/pw.x
+  mpiexec -n <nprocs> --ppn <ppn> $PW_X -in input.scf.in 2>&1 | tee output.scf.out
+
+defaults:
+  nodes: 1
+  walltime: 1800
+  queue: "debug"
+  ppn: 104
+
+scaling_notes: "104 CPU cores per node. CPU-only build with Intel MKL + ScaLAPACK."
+
+keywords: ["DFT", "density functional theory", "electronic structure", "SCF", "plane wave", "quantum espresso"]
+aliases: ["qe", "quantum espresso", "pwscf", "pw.x"]
+
+input_detection:
+  extensions: [".scf.in", ".relax.in", ".bands.in", ".pw.in"]
+  content_markers: ["&CONTROL", "&SYSTEM", "&ELECTRONS", "ATOMIC_SPECIES"]
+
+required_inputs: [".scf.in", ".relax.in", ".bands.in", ".pw.in"]
+optional_inputs: [".UPF"]
+output_patterns: ["output.*.out", "*.xml", "*.save"]
+
+notes: |
+  Built with MPICH wrappers (mpicc/mpif90) + Intel MKL for FFT/BLAS/ScaLAPACK.
+  Intel oneAPI Fortran (ifx) is the Fortran compiler on Aurora.
+  CPU-only build; GPU DFT on Aurora would require NVIDIA-specific patches.
+  Build script: jobs/aurora/build_qe/run.sh

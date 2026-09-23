@@ -1,0 +1,57 @@
+name: "GROMACS (HIP/ROCm)"
+description: "GPU-accelerated GROMACS via OpenCL/ROCm for AMD MI250X on Odo"
+category: simulation
+version: "2024.4"
+build_status: installed
+
+binary: "/gpfs/wolf2/olcf/csc708/world-shared/hzheng/software/gromacs_hip/bin/gmx_mpi"
+install_path: "/gpfs/wolf2/olcf/csc708/world-shared/hzheng/software/gromacs_hip"
+
+modules:
+  - rocm
+
+setup:
+  - "module load rocm"
+  - "module load cray-mpich"
+  - "export PATH=/gpfs/wolf2/olcf/csc708/world-shared/hzheng/software/gromacs_hip/bin:$PATH"
+
+gpu_support: true
+gpu_notes: "GPU offloading via OpenCL/ROCm on AMD MI250X (8 GCDs per node). Non-bonded, PME, and bonded interactions offloaded."
+
+run_command: |
+  srun -N 1 --ntasks-per-node 8 gmx_mpi mdrun -deffnm simulation -nb gpu -pme gpu -bonded gpu
+
+input_files: [".tpr", ".gro", ".mdp", ".top"]
+
+# --- Auto-detection ---
+keywords: ["molecular dynamics", "MD simulation", "biomolecular", "GROMACS", "protein", "lipid", "free energy", "ROCm", "HIP", "OpenCL", "AMD GPU"]
+aliases: ["gromacs", "gromacs_hip", "gmx", "gmx_mpi", "mdrun", "gromacs-gpu"]
+
+input_detection:
+  extensions: [".tpr", ".gro", ".mdp", ".top"]
+  filenames: []
+  content_markers: ["integrator", "nsteps", "dt", "coulombtype"]
+
+# --- Smart defaults ---
+defaults:
+  nodes: 1
+  walltime: 1800
+  queue: "batch"
+  account: "csc708"
+  ppn: 8          # 8 GCDs per node
+
+scaling_notes: "Use 1 MPI rank per GCD (8 per node). For multi-node scale --ntasks-per-node 8 across nodes. GPU offload flags: -nb gpu -pme gpu -bonded gpu."
+
+# --- Input validation ---
+required_inputs: [".tpr"]
+optional_inputs: [".gro", ".mdp", ".top", ".ndx", ".cpt"]
+
+# --- Output retrieval ---
+output_patterns: ["*.log", "*.edr", "*.trr", "*.xtc", "*.gro"]
+
+install_notes: "Built 2026-05-10. GPU-accelerated build (version 2024.4) with OpenCL/ROCm on Odo AMD MI250X."
+
+notes: |
+  GPU-accelerated GROMACS 2024.4 on Odo built against ROCm/OpenCL for AMD MI250X.
+  For CPU-only runs use the gromacs (CPU) variant.
+  Build script: jobs/odo/build_gromacs_hip/run.sh

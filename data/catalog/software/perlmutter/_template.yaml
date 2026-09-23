@@ -1,0 +1,52 @@
+# Software catalog entry template for Perlmutter (NERSC)
+# Copy this file as <app-name>.yaml and fill in the fields.
+
+name: ""                    # Display name (e.g., "LAMMPS", "Quantum ESPRESSO")
+description: ""             # One-line description of the software
+category: ""                # One of: simulation, dft, ml-framework, library, tool
+version: ""                 # Version string (e.g., "7.5", "3.0b7")
+
+binary: ""                  # Full path to the main executable
+install_path: ""            # Root install directory
+
+modules: []                 # Dependent modules to load
+
+setup:                      # Commands to run before the application (in order)
+  - "module reset"
+  # - "module load <name>"
+
+gpu_support: false
+gpu_notes: ""
+
+run_command: |              # Example srun launch command
+  srun -n 4 -G 4 --gpu-bind=single:1 $EXE <args>
+
+input_files: []
+
+# --- Auto-detection ---
+keywords: []
+aliases: []
+
+input_detection:
+  extensions: []
+  filenames: []
+  content_markers: []
+
+# --- Smart defaults ---
+defaults:
+  nodes: 1
+  walltime: 600
+  queue: "debug"
+  constraint: "gpu"
+  account: "dasrepo"
+
+scaling_notes: ""
+
+# --- Input validation ---
+required_inputs: []
+optional_inputs: []
+
+# --- Output retrieval ---
+output_patterns: []
+
+notes: ""

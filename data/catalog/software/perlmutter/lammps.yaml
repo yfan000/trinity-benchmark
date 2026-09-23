@@ -1,0 +1,55 @@
+name: "LAMMPS"
+description: "Classical molecular dynamics with GPU acceleration via Kokkos"
+category: simulation
+version: ""
+
+binary: ""   # fill in after build
+install_path: "/global/homes/h/hzheng/software/perlmutter/lammps"
+
+modules:
+  - PrgEnv-gnu
+  - cray-mpich
+  - cudatoolkit
+
+setup:
+  - "module reset"
+  - "module load PrgEnv-gnu"
+  - "module load cray-mpich"
+  - "module load cudatoolkit"
+  - "export PATH=/global/homes/h/hzheng/software/perlmutter/lammps/bin:$PATH"
+
+gpu_support: true
+gpu_notes: "Via Kokkos backend (-k on g <ngpus> -sf kk -pk kokkos)"
+
+run_command: |
+  srun -n 4 -G 4 --gpu-bind=single:1 lmp -in input.lammps -k on g 1 -sf kk -pk kokkos
+
+input_files: [".lammps", ".in", ".data"]
+
+# --- Auto-detection ---
+keywords: ["molecular dynamics", "MD simulation", "classical MD", "force field", "Lennard-Jones", "materials science", "LAMMPS"]
+aliases: ["lammps", "lmp", "lmp_mpi"]
+
+input_detection:
+  extensions: [".lammps", ".lmp"]
+  filenames: []
+  content_markers: ["units", "atom_style", "pair_style", "fix", "dump"]
+
+# --- Smart defaults ---
+defaults:
+  nodes: 1
+  walltime: 1800
+  queue: "debug"
+  constraint: "gpu"
+  account: "dasrepo"
+
+scaling_notes: "1 MPI rank per GPU with Kokkos. 4 GPUs per node on Perlmutter."
+
+# --- Input validation ---
+required_inputs: [".lammps", ".in", ".lmp"]
+optional_inputs: [".data", ".restart"]
+
+# --- Output retrieval ---
+output_patterns: ["log.lammps", "*.dump", "*.lammpstrj"]
+
+notes: "Binary path TBD — needs build. Use Kokkos GPU backend for acceleration."

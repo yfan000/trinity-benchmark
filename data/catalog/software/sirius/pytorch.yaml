@@ -1,0 +1,62 @@
+name: "PyTorch"
+description: "Deep learning framework for GPU-accelerated model training and inference on A100 GPUs via conda environment"
+category: ml-framework
+version: "2.x"
+
+binary: "python"
+install_path: "/lus/tegu/projects/PolarisAT/hzheng/software/pytorch"
+
+modules:
+  - conda
+
+setup:
+  - "module load conda"
+  - "conda activate /lus/tegu/projects/PolarisAT/hzheng/software/pytorch/conda_env"
+
+build_status: needs_build
+
+gpu_support: true
+gpu_notes: "CUDA 12.x support targeting A100 (SM_80). Multi-GPU via NCCL collective operations and DistributedDataParallel (DDP) or FSDP."
+
+run_command: |
+  torchrun --nproc_per_node=8 train.py
+
+input_files: [".py", ".json", ".yaml"]
+
+keywords: ["deep learning", "neural network", "LLM", "training", "GPU training", "PyTorch", "CUDA", "NCCL", "DDP", "FSDP", "DistributedDataParallel", "A100", "transformer", "fine-tuning"]
+aliases: ["pytorch", "torch", "torchrun", "pt", "torch.distributed"]
+
+input_detection:
+  extensions: [".py"]
+  filenames: ["train.py", "pretrain.py", "finetune.py", "main.py"]
+  content_markers: ["import torch", "torch.nn", "torch.distributed", "torchrun", "DataParallel", "DistributedDataParallel", "FSDP"]
+
+defaults:
+  nodes: 1
+  walltime: 1800
+  queue: "debug"
+  ppn: 8
+
+scaling_notes: |
+  torchrun --nproc_per_node=8 launches 8 processes, one per A100 GPU per node.
+  For multi-node: torchrun --nproc_per_node=8 --nnodes=<N> --node_rank=$RANK
+    --master_addr=$MASTER_ADDR --master_port=29500 train.py
+  NCCL handles GPU-to-GPU communication within and across nodes.
+  Use torch.distributed.init_process_group(backend='nccl') in training script.
+  FSDP is recommended over DDP for models that exceed single-GPU memory.
+
+required_inputs: [".py"]
+optional_inputs: ["*.json", "*.yaml", "*.safetensors", "*.pt", "*.bin"]
+
+output_patterns: ["checkpoints/", "*.pt", "*.safetensors", "runs/", "logs/"]
+
+notes: |
+  Build conda environment targeting A100 (SM_80):
+    conda create -p /lus/tegu/projects/PolarisAT/hzheng/software/pytorch/conda_env python=3.11
+    conda activate <env>
+    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+  Verify GPU access: python -c "import torch; print(torch.cuda.device_count())"
+  CUDA_VISIBLE_DEVICES can restrict which GPUs are used if needed.
+  For LLM fine-tuning, also install: transformers, accelerate, peft, trl, datasets.
+  Sirius nodes: 8 x A100 80 GB; use bf16 or fp16 mixed precision for training efficiency.
+  fp16 with CUBLAS on Sirius may crash — prefer bf16 or fp32+DeepSpeed ZeRO-3 for stability.

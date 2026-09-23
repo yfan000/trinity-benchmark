@@ -1,0 +1,55 @@
+name: "Nek5000"
+description: "Spectral element CFD solver for incompressible/low-Mach flows"
+category: simulation
+version: "master"
+
+binary: ""
+install_path: "/eagle/datascience/hzheng/software/nek5000/Nek5000"
+
+modules: []
+
+setup:
+  - "module load PrgEnv-gnu"
+  - "module swap gcc-native gcc-native/12.3"
+  - "module load cray-mpich"
+  - "export NEK_SOURCE_ROOT=/eagle/datascience/hzheng/software/nek5000/Nek5000"
+  - "export PATH=$NEK_SOURCE_ROOT/bin:$PATH"
+  - "export CC=cc"
+  - "export FC=ftn"
+
+gpu_support: false
+gpu_notes: "CPU-only (for GPU CFD see NekRS)"
+
+run_command: |
+  # Nek5000 builds per-case: cd to case dir, run makenek <casename>
+  # Then launch with:
+  mpiexec -n 4 --ppn 4 ./nek5000
+
+input_files: [".rea", ".re2", ".par", ".usr", ".SIZE"]
+
+# --- Auto-detection ---
+keywords: ["CFD", "spectral element", "incompressible flow", "Navier-Stokes", "turbulence", "heat transfer", "Nek5000"]
+aliases: ["nek5000", "nek", "nekrs"]
+
+input_detection:
+  extensions: [".rea", ".re2", ".par"]
+  filenames: ["SIZE", ".usr"]
+  content_markers: ["NEKTON", "mesh", "parameters", "userbc"]
+
+# --- Smart defaults ---
+defaults:
+  nodes: 1
+  walltime: 1800
+  queue: "debug"
+  ppn: 4
+
+scaling_notes: "Nek5000 scales well with MPI. Use 1 MPI rank per core. Typical: 32 ranks/node on Polaris (no GPU). Element count per rank should be ~500-2000 for efficiency."
+
+# --- Input validation ---
+required_inputs: [".rea", ".re2", ".par", ".usr"]
+optional_inputs: [".SIZE", ".map"]
+
+# --- Output retrieval ---
+output_patterns: ["*.fld", "*.f0*", "logfile", "SESSION.NAME"]
+
+notes: "Nek5000 compiles the solver per-case using makenek. Set NEK_SOURCE_ROOT and use makenek <casename> in the case directory. Use CC=cc and FC=ftn (Cray wrappers) for MPI support."

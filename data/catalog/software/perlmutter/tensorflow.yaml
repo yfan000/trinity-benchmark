@@ -1,0 +1,51 @@
+name: "TensorFlow"
+description: "Deep learning framework with GPU support via NERSC system module"
+category: ml-framework
+version: "2.15.0"
+
+binary: "python"
+install_path: ""   # system module; no user install path needed
+build_status: installed
+
+modules:
+  - tensorflow/2.15.0
+
+setup:
+  - "module reset"
+  - "module load tensorflow/2.15.0"
+
+gpu_support: true
+gpu_notes: "CUDA GPU support; multi-GPU via tf.distribute strategies"
+
+run_command: |
+  srun -n 4 -G 4 --gpu-bind=single:1 python train.py
+
+input_files: [".py"]
+
+# --- Auto-detection ---
+keywords: ["TensorFlow", "TF", "Keras", "deep learning", "neural network", "training", "GPU training", "distributed training"]
+aliases: ["tensorflow", "tf", "tf2", "keras"]
+
+input_detection:
+  extensions: [".py"]
+  filenames: []
+  content_markers: ["import tensorflow", "from tensorflow", "import keras", "tf.keras", "tf.distribute"]
+
+# --- Smart defaults ---
+defaults:
+  nodes: 1
+  walltime: 3600
+  queue: "debug"
+  constraint: "gpu"
+  account: "dasrepo"
+
+scaling_notes: "4 A100 GPUs per node. Use tf.distribute.MirroredStrategy for single-node multi-GPU, tf.distribute.MultiWorkerMirroredStrategy for multi-node."
+
+# --- Input validation ---
+required_inputs: [".py"]
+optional_inputs: [".yaml", ".json", "*.h5", "*.pb"]
+
+# --- Output retrieval ---
+output_patterns: ["*.h5", "*.pb", "saved_model/**", "checkpoint*", "logs/**"]
+
+notes: "NERSC system module; no build required. Check available versions with: module spider tensorflow. cuDNN included in the module."

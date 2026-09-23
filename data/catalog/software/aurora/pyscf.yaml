@@ -1,0 +1,28 @@
+name: "PySCF"
+description: "Python-based Simulations of Chemistry Framework (CPU-only; gpu4pyscf requires CUDA)"
+category: "quantum-chemistry"
+version: "latest"
+
+install_path: "/lus/flare/projects/datascience/hzheng/software/aurora/pyscf"
+venv: "/lus/flare/projects/datascience/hzheng/software/aurora/pyscf/venv"
+activate: "source /lus/flare/projects/datascience/hzheng/software/aurora/pyscf/venv/bin/activate"
+
+gpu_support: false
+gpu_notes: "Aurora uses Intel XPU; gpu4pyscf is CUDA-only and not available here."
+
+modules:
+  - frameworks
+
+setup:
+  - "export PYTHONNOUSERSITE=1"
+  - "module load frameworks"
+  - "source /lus/flare/projects/datascience/hzheng/software/aurora/pyscf/venv/bin/activate"
+
+keywords: ["quantum chemistry", "DFT", "HF", "BFD", "ccECP", "QMC", "trial wavefunction"]
+aliases: ["pyscf"]
+
+notes: >
+  CPU-only install (pyscf + h5py). Aurora has Intel XPU; gpu4pyscf is CUDA-only.
+  Set PYTHONNOUSERSITE=1 before activating to avoid stale ~/.local pth interference.
+  For QMC trial wavefunctions: use BFD or ccECP via mol.ecp='bfd' / mol.basis='bfd-vtz'.
+  ClearML task: c3f7f60b095a4520a5cd699484e20316 (install_pyscf_cpu, aurora-services)

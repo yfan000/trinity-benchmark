@@ -1,0 +1,56 @@
+name: "GROMACS"
+description: "High-performance molecular dynamics for biomolecular simulations — CPU-only build on Odo"
+category: simulation
+version: "2024.4"
+build_status: installed
+
+binary: "/gpfs/wolf2/olcf/csc708/world-shared/hzheng/software/gromacs/bin/gmx_mpi"
+install_path: "/gpfs/wolf2/olcf/csc708/world-shared/hzheng/software/gromacs"
+
+modules: []
+
+setup:
+  - "module load PrgEnv-gnu"
+  - "module load cray-mpich"
+  - "export PATH=/gpfs/wolf2/olcf/csc708/world-shared/hzheng/software/gromacs/bin:$PATH"
+
+gpu_support: false
+gpu_notes: "CPU-only build. For GPU-accelerated GROMACS on Odo (AMD MI250X) use gromacs_hip.yaml."
+
+run_command: |
+  mpiexec -n <nprocs> gmx_mpi mdrun -deffnm simulation
+
+input_files: [".tpr", ".gro", ".mdp", ".top"]
+
+# --- Auto-detection ---
+keywords: ["molecular dynamics", "MD simulation", "biomolecular", "GROMACS", "protein", "lipid", "free energy"]
+aliases: ["gromacs", "gmx", "gmx_mpi", "mdrun"]
+
+input_detection:
+  extensions: [".tpr", ".gro", ".mdp", ".top"]
+  filenames: []
+  content_markers: ["integrator", "nsteps", "dt", "coulombtype"]
+
+# --- Smart defaults ---
+defaults:
+  nodes: 1
+  walltime: 1800
+  queue: "batch"
+  account: "csc708"
+  ppn: 4
+
+scaling_notes: "CPU-only MPI build. Standard gmx_mpi mdrun across nodes. For GPU-accelerated runs use gromacs_hip build."
+
+# --- Input validation ---
+required_inputs: [".tpr"]
+optional_inputs: [".gro", ".mdp", ".top", ".ndx", ".cpt"]
+
+# --- Output retrieval ---
+output_patterns: ["*.log", "*.edr", "*.trr", "*.xtc", "*.gro"]
+
+install_notes: "Built 2026-05-10. CPU-only MPI build (version 2024.4) on Odo. No GPU offload."
+
+notes: |
+  CPU-only build of GROMACS 2024.4 on Odo. For GPU-accelerated simulations
+  with AMD MI250X (ROCm/OpenCL), use the gromacs_hip variant.
+  Build script: jobs/odo/build_gromacs/run.sh

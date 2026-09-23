@@ -1,0 +1,13 @@
+app: chai_lab
+system: aurora
+version: ""            # fill in after build
+benchmark:
+  name: ""             # e.g. "STMV 1.1M atoms", "LJ melt 108k atoms"
+  nodes: 1
+  gpus_per_node: null
+  walltime_s: null
+  throughput: null     # app-specific unit, e.g. ns/day, GFLOPS, steps/s
+  throughput_unit: ""
+  date: ""             # YYYY-MM-DD
+  job_script: ""       # relative path from repo root
+notes: ""

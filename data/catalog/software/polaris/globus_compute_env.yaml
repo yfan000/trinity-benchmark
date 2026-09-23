@@ -1,0 +1,43 @@
+name: "Globus Compute Endpoint Environment"
+description: "Python 3.11 conda environment for running Globus Compute endpoints on Polaris"
+category: infrastructure
+
+conda_env_name: "gc-py311"
+python_version: "3.11"
+
+create_commands:
+  - "module load conda"
+  - "conda create -n gc-py311 python=3.11 -y"
+  - "conda activate gc-py311"
+  - "pip install globus-compute-endpoint globus-compute-sdk"
+
+setup:
+  - "module load conda"
+  - "conda activate gc-py311"
+
+endpoints:
+  polaris-login:
+    description: "Runs tasks on the login node (no scheduler)"
+    engine: ThreadPoolEngine
+    max_workers: 4
+    start:
+      - "globus-compute-endpoint stop polaris-login"
+      - "globus-compute-endpoint start polaris-login"
+  polaris-compute:
+    description: "Submits tasks to compute nodes via PBS"
+    engine: GlobusComputeEngine
+    scheduler: PBSProProvider
+    queue: debug
+    account: datascience
+    gpus_per_node: 4
+    cpus_per_node: 32
+    start:
+      - "globus-compute-endpoint stop polaris-compute"
+      - "globus-compute-endpoint start polaris-compute"
+
+notes: |
+  Python 3.13 causes silent WorkerLost crashes due to dill/Parsl
+  incompatibility. Use Python 3.11.
+  Must activate gc-py311 env before starting endpoints.
+  Run scripts/setup_polaris_gc_env.sh on the Polaris login node
+  to create the env and configure both endpoints.

@@ -1,0 +1,89 @@
+name: "chai-lab"
+description: "Chai-1 protein structure prediction model (ROCm port for Frontier MI250X)"
+category: ml-framework
+version: "0.6.1"
+
+binary: "python"
+install_path: "/ccs/proj/csc708/hzheng/software/chai_lab/venv"
+
+modules:
+  - "PrgEnv-amd"
+  - "rocm"
+
+setup:
+  - "for AMD_VER in 6.4.0 6.3.2 6.3.0 6.2.4; do module swap amd amd/${AMD_VER} 2>/dev/null && module load rocm && break || true; done"
+  - "unset PYTHONPATH PYTHONHOME"
+  - "export PY=/ccs/proj/csc708/hzheng/software/chai_lab/venv/bin/python"
+  - "export CHAI_DOWNLOADS_DIR=/ccs/proj/csc708/hzheng/software/chai_lab/weights"
+
+gpu_support: true
+gpu_notes: |
+  AMD MI250X via ROCm. torch 2.9.1+rocm6.4 (after CUDA-wheel repair post chai-lab install).
+  GPU visibility requires matching amd/rocm module versions — default amd/6.2.4 causes
+  device_count()=0 with torch+rocm6.4. CPU fallback is available for smoke testing.
+  bfloat16 supported on MI250X.
+
+run_command: |
+  ${PY} - << 'PYEOF'
+  import pathlib
+  from chai_lab.chai1 import run_inference
+  import torch
+  candidates = run_inference(
+      fasta_file=pathlib.Path(os.environ["INPUT_DIR"]) / "input.fasta",
+      output_dir=pathlib.Path(os.environ["OUTPUT_DIR"]),  # must be empty
+      num_trunk_recycles=3,
+      num_diffn_timesteps=200,
+      seed=42,
+      device="cuda" if torch.cuda.is_available() else "cpu",
+      use_esm_embeddings=True,
+      use_msa_server=False,
+      low_memory=True,
+  )
+  PYEOF
+
+input_files: [".fasta", ".fa"]
+output_patterns: ["output/*.cif", "output/*.npz"]
+
+keywords: ["chai", "chai-1", "chai1", "protein folding", "protein structure", "structure prediction", "ROCm", "MI250X", "AMD"]
+aliases: ["chai", "chai1", "chai-lab", "chai_lab"]
+
+input_detection:
+  extensions: [".fasta", ".fa", ".faa"]
+  content_markers: [">"]
+
+defaults:
+  nodes: 1
+  walltime: 3600
+  queue: "g1"
+  account: "CSC708"
+
+smoke_command: |
+  ${PY} -c "
+  import torch, chai_lab
+  print('torch:', torch.__version__)
+  print('chai_lab:', chai_lab.__version__)
+  print('device count:', torch.cuda.device_count())
+  "
+
+build_notes: |
+  Ported 2026-05-06 from Aurora XPU fork (msinclair-py/chai-lab) to upstream ROCm version.
+  Base: conda env python=3.12 via miniforge3. chai_lab==0.6.1 from PyPI (upstream).
+
+  CRITICAL: chai-lab pip install replaces ROCm torch with CUDA wheel. Auto-detected and
+  repaired in install.sh by reinstalling torch from ROCm index after chai-lab install.
+  torch 2.6.0 has no +rocm6.x wheel; falls back to torch 2.9.1+rocm6.4 (latest).
+
+  Gotchas:
+  - Output dir must be empty before run_inference (same as Polaris)
+  - In Slurm scripts: 'export VAR=value' not 'export VAR' for env var propagation to Python
+  - amd module swap required: default amd/6.2.4+rocm/6.2.4 mismatches torch+rocm6.4
+  - OLCF proxy (proxy.ccs.ornl.gov:3128) required on compute nodes for weight download
+  - CPU fallback works but is slow (30-60 min for 23-aa peptide at 200 diffusion steps)
+  - Account: CSC708 (Frontier), partition: g1 (small test) or batch (production)
+
+build_status: "completed"
+build_script: "jobs/frontier/build_chai_lab/install.sh"
+inference_script: "jobs/frontier/build_chai_lab/infer_wrapper.sh"
+clearml_install_task: "b2b0b137e2b749b58732533212dde9bd"
+clearml_smoke_task: "5ac0c9b6e6664b879c6e1e1bb3348e1f"
+smoke_note: "Ran on CPU (GPU visibility depends on amd/6.4.x module availability)"

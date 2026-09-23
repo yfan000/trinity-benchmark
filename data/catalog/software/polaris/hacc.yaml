@@ -1,0 +1,52 @@
+name: "HACCabana"
+description: "GPU-accelerated cosmological N-body proxy app (HACC short-range force solver via Cabana/Kokkos)"
+category: simulation
+version: "main"
+
+binary: "/eagle/datascience/hzheng/software/hacc/bin/driver_short-range"
+install_path: "/eagle/datascience/hzheng/software/hacc"
+
+modules:
+  - craype-accel-nvidia80
+  - cudatoolkit-standalone
+  - kokkos
+  - cabana
+
+setup:
+  - "module use /soft/modulefiles"
+  - "module load PrgEnv-gnu"
+  - "module load craype-accel-nvidia80"
+  - "module load cudatoolkit-standalone"
+  - "module load spack-pe-base cmake"
+  - "module load kokkos cabana"
+
+gpu_support: true
+gpu_notes: "Native CUDA via Kokkos (A100 Ampere80)"
+
+run_command: |
+  mpiexec -n $NTOTAL_RANKS --ppn $NRANKS_PER_NODE $EXE --input-file input.deck
+
+input_files: ["input.deck"]
+
+keywords: ["cosmology", "n-body", "particle", "hacc"]
+aliases: ["hacc", "haccabana", "cabana-pic"]
+
+input_detection:
+  extensions: [".deck"]
+  filenames: ["input.deck"]
+  content_markers: []
+
+defaults:
+  nodes: 1
+  walltime: 600
+  queue: "debug"
+  ppn: 4
+
+scaling_notes: "Scales well across multiple GPUs; 1 MPI rank per GPU recommended"
+
+required_inputs: ["input.deck"]
+optional_inputs: []
+
+output_patterns: ["*.out", "*.log"]
+
+notes: "Built from https://github.com/ECP-copa/HACCabana. Requires Cabana >= 0.6.0 with CUDA backend."

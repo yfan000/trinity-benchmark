@@ -1,0 +1,111 @@
+# DeepSpeed distributed training — Sophia (POWER9 + V100)
+name: "DeepSpeed"
+description: "DeepSpeed distributed LLM/model training, installed into the PyTorch MPI conda env"
+category: "ml-framework"
+version: ""
+cuda_version: "12.4"
+
+binary: "/eagle/datascience/hzheng/software/sophia/deepspeed_venv_v2/bin/python"
+install_path: "/eagle/datascience/hzheng/software/sophia/deepspeed_venv_v2"
+
+build_status: built
+
+setup: |
+  source /home/hzheng/clearml/miniconda3/etc/profile.d/conda.sh
+  conda activate /eagle/datascience/hzheng/software/sophia/pytorch-mpi/conda_env
+  export LD_LIBRARY_PATH=/usr/lib64:/usr/local/cuda/lib64:${LD_LIBRARY_PATH}
+
+gpu_support: true
+gpu_notes: |
+  CUDA 12.4, V100 (sm_70). DeepSpeed uses CUDA for all GPU operations.
+  Requires the PyTorch MPI conda env (pytorch.yaml) as its base.
+  LD_LIBRARY_PATH must include /usr/lib64 (libcuda.so) and /usr/local/cuda/lib64.
+  Use ZeRO-3 for large model training on multiple GPUs.
+
+build_notes: |
+  Install DeepSpeed via pip into the existing PyTorch MPI conda env on Sophia.
+  Key steps:
+  - Activate pytorch_mpi env (see pytorch.yaml for build details)
+  - Set CUDAHOSTCXX=/usr/bin/g++ (conda gcc rejected by nvcc; system gcc 11.4 works)
+  - Install: DS_BUILD_OPS=1 pip install deepspeed
+    (DS_BUILD_OPS=1 compiles CUDA kernels; omit for CPU-only ops)
+  - Verify: ds_report (lists available ops and CUDA status)
+  - For fp16/bf16 on V100: bf16 is NOT supported (V100 is Volta); use fp16 or fp32
+  - ZeRO-3 recommended for large models (avoids SIGKILL seen with ZeRO-1/2 on
+    multi-tile configs)
+  - Optionally install apex: pip install apex --global-option="--cuda_ext"
+    (may require CMAKE_POLICY_VERSION_MINIMUM=3.5 for cmake 4.x compat)
+
+run_command: |
+  # Single-node, 8 GPUs:
+  deepspeed --num_gpus=8 train.py --deepspeed ds_config.json
+  # Or with mpirun (for MPI-launched distributed training):
+  mpirun -n 8 python train.py --deepspeed ds_config.json
+
+input_files:
+  - "*.py"
+  - "ds_config.json"
+  - "*.yaml"
+
+keywords:
+  - "deep learning"
+  - "large language model"
+  - "LLM"
+  - "DeepSpeed"
+  - "ZeRO"
+  - "distributed training"
+  - "model parallelism"
+
+aliases:
+  - "deepspeed"
+  - "ds"
+  - "zero"
+  - "zero3"
+
+input_detection:
+  extensions:
+    - ".py"
+    - ".json"
+  filenames:
+    - "train.py"
+    - "ds_config.json"
+  content_markers:
+    - "import deepspeed"
+    - "from deepspeed"
+    - "zero_optimization"
+    - "deepspeed_config"
+
+defaults:
+  nodes: 1
+  walltime: 3600
+  queue: "by-gpu"
+  ppn: 8
+
+scaling_notes: |
+  Sophia has 8 V100 GPUs per node. Single-node training should use --num_gpus=8.
+  For multi-node runs use mpirun across nodes with deepspeed launcher or torchrun.
+  ZeRO-3 is recommended for large models; ZeRO-1/2 can cause SIGKILL issues under
+  some configurations.
+
+required_inputs:
+  - "*.py"
+  - "ds_config.json"
+
+optional_inputs:
+  - "*.yaml"
+  - "*.json"
+
+output_patterns:
+  - "checkpoints/"
+  - "*.pt"
+  - "*.bin"
+  - "*.log"
+  - "ds_report.txt"
+
+notes: |
+  DeepSpeed shares the pytorch-mpi conda env (pytorch.yaml).
+  Sophia uses PBS scheduler. Submit to the by-gpu queue for GPU jobs.
+  No Cray environment — use conda/pip workflows throughout.
+  bf16 is NOT supported on V100 (Volta architecture); use fp16 or fp32.
+  Use CUDAHOSTCXX=/usr/bin/g++ when compiling CUDA ops.
+  User install base: /eagle/datascience/hzheng/software/sophia/

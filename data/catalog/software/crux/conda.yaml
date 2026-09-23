@@ -1,0 +1,31 @@
+name: "Conda Environment (ML)"
+description: "Python 3.11 conda environment for ML and scientific computing on Crux (CPU-only)"
+category: ml-framework
+
+conda_env_path: "/eagle/datascience/hzheng/software/crux/pytorch/conda_env"
+python_version: "3.11"
+
+setup:
+  - "source /eagle/datascience/hzheng/software/crux/pytorch/conda_env/bin/activate"
+
+packages:
+  - numpy==2.4.4
+  - sympy==1.14.0
+  - networkx==3.6.1
+  - jinja2==3.1.6
+  - filelock==3.25.2
+  - fsspec==2026.3.0
+  - psutil==7.2.2
+  - torch==2.11.0+cpu
+  - scipy==1.17.1
+  - pandas==3.0.2
+  - matplotlib==3.10.9
+  - scikit-learn==1.8.0
+  - h5py==3.16.0
+  - tqdm==4.67.3
+  - mpi4py==4.1.1
+  - jupyterlab==4.5.7
+
+gpu_support: false
+
+notes: "Activate with: source <conda_env_path>/bin/activate. Includes Intel MKL + OpenBLAS."

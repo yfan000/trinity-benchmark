@@ -1,0 +1,137 @@
+# NERSC Perlmutter — GPU/CPU hybrid supercomputer at NERSC
+
+name: "Perlmutter"
+facility: "NERSC"
+description: "GPU/CPU hybrid supercomputer at NERSC (NVIDIA A100 GPUs + AMD Milan CPUs)"
+
+software_build_dir: "/global/cfs/cdirs/dasrepo/hzheng/software/perlmutter"  # permanent CFS (no purge); migrated from pscratch 2026-05-09
+
+backend: "iri"
+
+compute:
+  resource_id: "94351904-6dba-4c16-b5cd-fbd280d8615b"  # Perlmutter Compute Nodes
+  api_base_url: "https://api.iri.nersc.gov/api/v1"
+  token_env_var: "NERSC_IRI_TOKEN"
+
+storage:
+  scratch:
+    resource_id: "43d8f6c0-f900-48ce-b267-73714103f4ac"
+    mount_path: "/pscratch/sd"
+    remote_base_path: ""  # fill in: /<first_letter>/<username>
+  cfs:
+    resource_id: "59e80c79-4dfd-4c53-9c07-7405685fcd37"
+    mount_path: "/global/cfs/cdirs"
+    remote_base_path: ""  # fill in: /<project>
+  homes:
+    resource_id: "65b28619-c3b6-4942-8da1-044a3b3a2a9e"
+    mount_path: "/global/homes"
+    remote_base_path: ""  # fill in: /<first_letter>/<username>
+  common:
+    resource_id: "7e07a611-f927-4a39-a44d-b1d6e307accd"
+    mount_path: "/global/common/software"
+
+globus:
+  scratch:
+    endpoint_id: "9d6d994a-6d04-11e5-ba46-22000b92c6ec"  # NERSC DTN
+    path_prefix: ""
+  cfs:
+    endpoint_id: "9d6d994a-6d04-11e5-ba46-22000b92c6ec"
+    path_prefix: ""
+  homes:
+    endpoint_id: "9d6d994a-6d04-11e5-ba46-22000b92c6ec"
+    path_prefix: ""
+  compute_endpoint_id:
+    mep: "7fa4b906-79a1-4a1c-805e-4c9c5133b97f"    # multi-user endpoint (MEP)
+
+clearml:
+  queues:
+    perlmutter: "5915a48b62364ee9ad576585c750bcf5"
+    perlmutter-login: "4877897476124b13b11fbf43fc4ca46c"
+    perlmutter-services: "fdd20e2a45bb4774b21d811975635ad4"
+    perlmutter-services-executor: "99df6a33ff8542ebb814a12462cc203b"
+    perlmutter-persistent-compute: "c59c3613050e4ffcb7039b1ccdc06325"
+
+scheduler:
+  type: "slurm"
+  # Source: docs.nersc.gov/jobs/policy/ (2026-05-09)
+  # All QOS require --constraint=gpu for GPU nodes (auto-set in job_defaults)
+  # Slurm uses QOS not partition names; specify with --qos=<name>
+  queues:
+    express_amsc:
+      max_nodes: 16
+      max_walltime: 21600   # 6 hours
+      account: "amsc013"
+      notes: "AmSC demo allocation — shared pool, prefer <8 nodes when others may be using it"
+    debug:
+      min_nodes: 1
+      max_nodes: 8
+      min_walltime: 0
+      max_walltime: 1800    # 30 minutes
+      max_running_jobs: 2
+      charge_factor: 1.0
+    regular:
+      min_nodes: 1
+      max_nodes: null        # unlimited (full system)
+      min_walltime: 0
+      max_walltime: 172800   # 48 hours
+      charge_factor: 1.0
+      notes: "128+ GPU nodes get 50% discount. Most common QOS."
+    premium:
+      min_nodes: 1
+      max_nodes: null        # unlimited
+      min_walltime: 0
+      max_walltime: 172800   # 48 hours
+      charge_factor: 4.0    # 2x or 4x depending on allocation type
+      notes: "Higher priority than regular; charged at premium rate."
+    shared:
+      max_nodes: 1           # fractional GPU allocation (sub-node sharing)
+      min_walltime: 0
+      max_walltime: 172800   # 48 hours
+      charge_factor: 1.0
+      notes: "For jobs using 1-2 GPUs; charged only for GPUs used, not full node."
+    preempt:
+      min_nodes: 1
+      max_nodes: 128
+      min_walltime: 7200    # 2 hours (minimum before eligible for preemption)
+      max_walltime: 172800   # 48 hours
+      charge_factor: 0.25   # after 2hr minimum
+      notes: "Preemptable by higher-priority jobs. Runs on otherwise-idle nodes."
+    interactive:
+      min_nodes: 1
+      max_nodes: 4
+      min_walltime: 0
+      max_walltime: 14400    # 4 hours
+      max_running_jobs: 2
+      charge_factor: 1.0
+    jupyter:
+      min_nodes: 1
+      max_nodes: 4
+      min_walltime: 0
+      max_walltime: 21600    # 6 hours
+      max_running_jobs: 1
+      charge_factor: 1.0
+    overrun:
+      min_nodes: 1
+      max_nodes: null        # unlimited
+      min_walltime: 0
+      max_walltime: 172800   # 48 hours
+      charge_factor: 0.0    # free (runs on idle nodes only)
+      notes: "No charge; lowest priority; runs only on nodes not needed by paid jobs."
+
+hardware:
+  nodes: 3072
+  gpus_per_node: 4
+  gpu_type: "A100"
+  cpus_per_node: 64
+  cpu_type: "AMD EPYC 7763 (Milan)"
+  memory_per_node_gb: 256
+
+job_defaults:
+  shell: "#!/bin/bash -l"
+  nodes: 1
+  walltime: 600
+  queue: "express_amsc"
+  account: "amsc013"
+  ppn: 4
+  custom_attributes:
+    constraint: "gpu"

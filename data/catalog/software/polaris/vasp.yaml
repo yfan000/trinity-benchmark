@@ -1,0 +1,50 @@
+name: "VASP"
+description: "Vienna Ab initio Simulation Package for electronic structure calculations"
+category: dft
+version: ""
+
+binary: ""
+install_path: "/soft/applications/vasp"
+
+modules:
+  - vasp
+
+setup:
+  - "module use /soft/modulefiles"
+  - "module load vasp"
+
+gpu_support: true
+gpu_notes: "GPU-accelerated via VASP 6.x GPU port"
+
+run_command: |
+  mpiexec -n 4 --ppn 4 vasp_std
+
+input_files: ["INCAR", "POSCAR", "POTCAR", "KPOINTS"]
+
+# --- Auto-detection ---
+keywords: ["DFT", "density functional theory", "electronic structure", "VASP", "Vienna", "ab initio", "PAW"]
+aliases: ["vasp", "vasp_std", "vasp_gam", "vasp_ncl"]
+
+input_detection:
+  extensions: []
+  filenames: ["INCAR", "POSCAR", "POTCAR", "KPOINTS"]
+  content_markers: ["ENCUT", "ISMEAR", "EDIFF", "IBRION"]
+
+# --- Smart defaults ---
+defaults:
+  nodes: 1
+  walltime: 1800
+  queue: "debug"
+  ppn: 4
+
+scaling_notes: "1 node for small systems (<100 atoms). VASP GPU port works best with 4 MPI ranks per node on Polaris."
+
+# --- Input validation ---
+# VASP uses AND logic: ALL four files must be present
+required_inputs: ["INCAR", "POSCAR", "POTCAR", "KPOINTS"]
+optional_inputs: ["CHGCAR", "WAVECAR"]
+
+# --- Output retrieval ---
+output_patterns: ["OUTCAR", "OSZICAR", "CONTCAR", "vasprun.xml", "EIGENVAL", "DOSCAR"]
+
+notes: "VASP requires a license — verify access before use. Verify exact module name and binary path on Polaris."

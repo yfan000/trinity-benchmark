@@ -1,0 +1,51 @@
+build_status: built
+name: "GROMACS"
+description: "High-performance molecular dynamics for biomolecular simulations"
+category: simulation
+version: ""
+
+binary: "/global/cfs/cdirs/dasrepo/hzheng/software/perlmutter/gromacs/bin/gmx_mpi"
+install_path: "/global/cfs/cdirs/dasrepo/hzheng/software/perlmutter/gromacs"
+
+modules:
+  - gromacs   # check exact module name with: module avail gromacs
+
+setup:
+  - "module reset"
+  - "module load gromacs"   # verify name: module avail gromacs
+
+gpu_support: true
+gpu_notes: "Native CUDA GPU offload for non-bonded and PME calculations"
+
+run_command: |
+  srun -n 4 -G 4 gmx_mpi mdrun -v -deffnm md -ntmpi 4 -ntomp 16 -gpu_id 0123
+
+input_files: [".tpr", ".gro", ".mdp", ".top"]
+
+# --- Auto-detection ---
+keywords: ["molecular dynamics", "biomolecular simulation", "protein", "lipid", "GROMACS", "MD"]
+aliases: ["gromacs", "gmx", "gmx_mpi", "grompp", "mdrun"]
+
+input_detection:
+  extensions: [".tpr", ".mdp", ".gro", ".top"]
+  filenames: ["topol.tpr", "md.mdp"]
+  content_markers: ["[ moleculetype ]", "[ system ]", "nsteps"]
+
+# --- Smart defaults ---
+defaults:
+  nodes: 1
+  walltime: 3600
+  queue: "debug"
+  constraint: "gpu"
+  account: "dasrepo"
+
+scaling_notes: "1 GPU per MPI rank for short-range; PME on separate GPU. Scale to multiple nodes with gmx_mpi."
+
+# --- Input validation ---
+required_inputs: [".tpr"]
+optional_inputs: [".cpt", ".gro"]
+
+# --- Output retrieval ---
+output_patterns: ["*.xtc", "*.trr", "*.edr", "*.log", "*.gro"]
+
+notes: "Verify module name with 'module avail gromacs' on login node."

@@ -1,0 +1,56 @@
+name: "Nek5000"
+description: "Spectral element solver for incompressible Navier-Stokes and related PDEs"
+category: simulation
+version: ""
+
+binary: "/global/cfs/cdirs/dasrepo/hzheng/software/perlmutter/nek5000/bin/makenek"
+install_path: "/global/cfs/cdirs/dasrepo/hzheng/software/perlmutter/nek5000"
+build_status: built
+
+modules:
+  - PrgEnv-gnu
+  - cray-mpich
+  - cray-fftw
+
+setup:
+  - "module reset"
+  - "module load PrgEnv-gnu"
+  - "module load cray-mpich"
+  - "module load cray-fftw"
+  - "export PATH=/global/homes/h/hzheng/software/perlmutter/nek5000/bin:$PATH"
+
+gpu_support: false
+gpu_notes: ""
+
+run_command: |
+  srun -n 16 nek5000
+
+input_files: [".par", ".re2", ".ma2", ".usr"]
+
+# --- Auto-detection ---
+keywords: ["spectral element", "CFD", "computational fluid dynamics", "Navier-Stokes", "high-order", "turbulence", "heat transfer"]
+aliases: ["nek5000", "nek", "nekton"]
+
+input_detection:
+  extensions: [".par", ".usr"]
+  filenames: ["SESSION.NAME"]
+  content_markers: ["[GENERAL]", "[MESH]", "[VELOCITY]", "[TEMPERATURE]"]
+
+# --- Smart defaults ---
+defaults:
+  nodes: 1
+  walltime: 1800
+  queue: "debug"
+  constraint: "cpu"
+  account: "dasrepo"
+
+scaling_notes: "CPU-only. Scales well to thousands of MPI ranks. Each element is assigned to one MPI rank."
+
+# --- Input validation ---
+required_inputs: [".par", ".re2", "SESSION.NAME"]
+optional_inputs: [".ma2", ".usr"]
+
+# --- Output retrieval ---
+output_patterns: ["*.fld", "*.his", "logfile"]
+
+notes: "Binary path TBD — needs build. Nek5000 compiles a case-specific binary; the run directory must contain SESSION.NAME pointing to the case files."

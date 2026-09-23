@@ -1,0 +1,70 @@
+name: GAMESS RI-MP2 mini-app
+description: DOE quantum-chemistry RI-MP2 correlation-energy kernel; cross-vendor benchmark
+category: simulation
+version: "jkwack/master @ 70f287eb (2026-04-30)"
+
+binary: /eagle/datascience/hzheng/software/polaris/gamess_rimp2/bin/rimp2-cublas
+install_path: /eagle/datascience/hzheng/software/polaris/gamess_rimp2
+
+modules:
+  - cudatoolkit-standalone
+
+setup:
+  - "module use /soft/modulefiles"
+  - "module load cudatoolkit-standalone"
+  # Strip clearml-agent's miniconda from PATH so Cray ftn wins
+  - "export PATH=$(echo \"$PATH\" | tr ':' '\\n' | grep -v 'clearml/miniconda3' | tr '\\n' ':' | sed 's/:$//')"
+
+gpu_support: true
+gpu_notes: "OpenMP-target offload (cc80) with cuBLAS via -cudalib=cublas; built with nvfortran via Cray ftn."
+
+run_command: |
+  ./rimp2-cublas <input.kern>
+  # or, for multi-rank:
+  # mpiexec -n 1 --ppn 1 ./rimp2-cublas <input.kern>
+
+input_files: [".kern"]
+
+keywords: ["chemistry", "RI-MP2", "MP2", "GAMESS", "quantum chemistry", "miniapp"]
+aliases: ["rimp2", "gamess_rimp2", "gamess-rimp2", "gamess_mini"]
+
+input_detection:
+  extensions: [".kern"]
+
+defaults:
+  nodes: 1
+  walltime: 600          # benz.kern is ~2 ms; bigger inputs need more
+  queue: "debug"
+  ppn: 1                 # default 1 GPU; use --ppn 4 for full-node
+
+scaling_notes: |
+  benz.kern is too small (23 MB / ~2 ms wall) — pure init/teardown overhead.
+  Use cor.kern (~100 MB) for first real profile, c60.kern (~1 GB) for kernel
+  deep-dive, w30/w60.kern for scaling studies. Larger inputs at:
+  https://anl.box.com/v/GAMESS-RI-MP2-Inputs.
+
+required_inputs: [".kern"]
+
+output_patterns:
+  - "*.out"
+
+build_notes: |
+  Built 2026-04-30 (3 iterations).
+  Recipe: jobs/polaris/build_gamess_rimp2/run.sh
+  Recipe doc: .claude/skills/build-software/references/apps/gamess_rimp2.md
+  Key flags: ftn -mp=gpu -gpu=cc80 -DCUBLAS -O3 -Mpreprocess -cudalib=cublas
+  Workarounds:
+    - Don't load PrgEnv-nvhpc/8.5.0 (broken nvhpc dep)
+    - Don't use `mpif90` (resolves to conda Open MPI on clearml-agent)
+    - Use Cray ftn after stripping clearml miniconda from PATH
+
+profile_provenance:
+  - run_id: polaris-gamess_rimp2-nsys-20260430-140939-fa78b4
+    tool: nsys
+    input: benz.kern
+    finding: init_dominated (input too small)
+    report: projects/profiling/results/reports/polaris-gamess_rimp2-nsys-20260430-140939.md
+
+notes: |
+  This is the first cell of the projects/profiling/ matrix study (Phase 2).
+  Cross-vendor port (Aurora SYCL/oneMKL, Frontier HIP/rocBLAS) planned for Phase 5.

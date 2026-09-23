@@ -1,0 +1,48 @@
+name: "WRF"
+description: "Weather Research and Forecasting (WRF) model (CPU-only build)"
+category: simulation
+version: ""
+
+binary: "/eagle/datascience/hzheng/software/crux/wrf/main/wrf.exe"
+install_path: "/eagle/datascience/hzheng/software/crux/wrf"
+
+modules: []
+
+setup:
+  - "module swap PrgEnv-cray PrgEnv-gnu"
+  - "module load cray-mpich"
+  - "module load cray-hdf5"
+  - "module load cray-netcdf"
+  - "export PATH=/eagle/datascience/hzheng/software/crux/wrf/main:$PATH"
+  - "export WRF_DIR=/eagle/datascience/hzheng/software/crux/wrf"
+
+gpu_support: false
+
+run_command: |
+  mpiexec -n 32 --ppn 32 wrf.exe
+
+input_files: ["namelist.input", "wrfbdy_d01", "wrfinput_d01"]
+
+keywords: ["weather", "numerical weather prediction", "WRF", "atmospheric simulation", "climate"]
+aliases: ["wrf", "wrf.exe", "wrfv4"]
+
+input_detection:
+  extensions: []
+  filenames: ["namelist.input", "wrfinput_d01", "wrfbdy_d01"]
+  content_markers: ["&time_control", "&domains", "&physics", "&dynamics"]
+
+defaults:
+  nodes: 1
+  walltime: 3600
+  queue: "workq"
+  ppn: 128
+
+scaling_notes: "CPU-only build. WRF decomposes domain across MPI ranks. Tune e_we/e_sn grid dimensions and processor tile sizes in namelist.input."
+
+required_inputs: ["namelist.input", "wrfinput_d01", "wrfbdy_d01"]
+optional_inputs: ["wrflowinp_d01"]
+output_patterns: ["wrfout_d*", "rsl.out.*", "rsl.error.*"]
+
+build_status: built
+
+notes: "CPU-only build with PrgEnv-gnu (GCC 13.2) + cray-mpich + cray-hdf5 + cray-netcdf on Crux. WPS must also be built separately for input preprocessing."

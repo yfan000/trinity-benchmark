@@ -1,0 +1,53 @@
+name: "PyTorch (XPU)"
+description: "PyTorch with Intel XPU (GPU) support for Aurora Intel Data Center GPU Max Series"
+category: ml-framework
+version: "main"
+build_status: built
+
+binary: "/lus/flare/projects/datascience/hzheng/software/aurora/pytorch-xpu-main/conda_env/bin/python"
+install_path: "/lus/flare/projects/datascience/hzheng/software/aurora/pytorch-xpu-main/conda_env"
+conda_env: "/lus/flare/projects/datascience/hzheng/software/aurora/pytorch-xpu-main/conda_env"
+
+modules:
+  - oneapi/release
+  - intel_compute_runtime
+
+setup:
+  - "module use /soft/modulefiles"
+  - "module load oneapi/release"
+  - "module load intel_compute_runtime"
+  - "unset PYTHONPATH"
+  - "CONDA_BIN=/opt/aurora/26.26.0/spack/unified/1.1.1/install/linux-x86_64/miniforge3-25.11.0-1-khkcc6i/bin/conda"
+  - "eval \"$(${CONDA_BIN} shell.bash hook)\""
+  - "conda activate /lus/flare/projects/datascience/hzheng/software/aurora/pytorch-xpu-main/conda_env"
+  - "export PYTHONPATH=/lus/flare/projects/datascience/hzheng/software/aurora/pytorch-xpu-main/conda_env/lib/python3.11/site-packages"
+
+gpu_support: true
+gpu_notes: |
+  Intel Data Center GPU Max Series (Ponte Vecchio) via USE_XPU=1.
+  TORCH_XPU_ARCH_LIST="pvc". Use torch.xpu device.
+  XCCL for collective comms. MPI enabled via Intel MPI.
+
+run_command: |
+  # For XPU distributed training:
+  mpiexec -n 6 --ppn 6 python train.py
+  # Or with torchrun:
+  torchrun --nproc_per_node=6 train.py
+
+defaults:
+  nodes: 1
+  walltime: 3600
+  queue: "debug"
+  ppn: 6
+
+scaling_notes: "6 XPU tiles per node. Use torch.xpu device for GPU tensors. XCCL backend for distributed."
+
+keywords: ["pytorch", "deep learning", "machine learning", "neural network", "XPU", "Intel GPU"]
+aliases: ["pytorch", "torch", "pytorch-xpu"]
+
+notes: |
+  Built from PyTorch main branch with USE_XPU=1.
+  Key settings: USE_XPU=1, USE_CUDA=0, TORCH_XPU_ARCH_LIST="pvc", CC=gcc, CXX=g++.
+  Conda from /opt/aurora/26.26.0/.../miniforge3. Python 3.11.
+  Must unset PYTHONPATH to avoid ClearML agent Python 3.10 leaking in.
+  Build script: jobs/aurora/build_pytorch/run.sh (takes 1-2 hours on login node)

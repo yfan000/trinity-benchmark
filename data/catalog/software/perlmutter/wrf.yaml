@@ -1,0 +1,59 @@
+name: "WRF"
+description: "Weather Research and Forecasting mesoscale atmospheric simulation model"
+category: simulation
+version: ""
+
+binary: ""   # fill in after build; wrf.exe
+install_path: "/global/homes/h/hzheng/software/perlmutter/wrf"
+build_status: needs_build
+
+modules:
+  - PrgEnv-gnu
+  - cray-mpich
+  - cray-hdf5
+  - cray-netcdf
+
+setup:
+  - "module reset"
+  - "module load PrgEnv-gnu"
+  - "module load cray-mpich"
+  - "module load cray-hdf5"
+  - "module load cray-netcdf"
+  - "export PATH=/global/homes/h/hzheng/software/perlmutter/wrf/main:$PATH"
+  - "export WRF_DIR=/global/homes/h/hzheng/software/perlmutter/wrf"
+
+gpu_support: false
+gpu_notes: ""
+
+run_command: |
+  srun -n 16 wrf.exe
+
+input_files: ["namelist.input", "wrfbdy_d01", "wrfinput_d01"]
+
+# --- Auto-detection ---
+keywords: ["WRF", "weather", "atmospheric", "NWP", "numerical weather prediction", "mesoscale", "meteorology", "climate"]
+aliases: ["wrf", "wrf.exe", "real.exe", "wps"]
+
+input_detection:
+  extensions: []
+  filenames: ["namelist.input", "namelist.wps"]
+  content_markers: ["&time_control", "&domains", "&physics", "&dynamics", "&bdy_control"]
+
+# --- Smart defaults ---
+defaults:
+  nodes: 1
+  walltime: 3600
+  queue: "debug"
+  constraint: "cpu"
+  account: "dasrepo"
+
+scaling_notes: "CPU-only. Scales to hundreds of MPI ranks. Decomposition controlled by nproc_x and nproc_y in namelist.input."
+
+# --- Input validation ---
+required_inputs: ["namelist.input", "wrfinput_d01", "wrfbdy_d01"]
+optional_inputs: ["wrflowinp_d01", "ozone.formatted"]
+
+# --- Output retrieval ---
+output_patterns: ["wrfout_d*", "wrfrst_d*", "rsl.out.*", "rsl.error.*"]
+
+notes: "Binary path TBD — needs build. Also requires WPS (WRF Preprocessing System) to prepare input data. NetCDF and HDF5 are required at build and runtime."

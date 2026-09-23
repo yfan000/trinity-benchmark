@@ -1,0 +1,87 @@
+name: "QMCPACK"
+description: "Quantum Monte Carlo ab initio electronic structure code (CPU build on Sophia AMD EPYC nodes)"
+category: simulation
+version: "v4.2.0"
+
+binary: "/eagle/datascience/hzheng/software/sophia/qmcpack/bin/qmcpack"
+install_path: "/eagle/datascience/hzheng/software/sophia/qmcpack"
+build_status: built
+
+# Bootstrapped libraries (5-layer stack on /eagle, all built fresh because Sophia
+# ships none of these as modules and the conda toolchain hijacks autoconf probes)
+deps:
+  openblas: "/eagle/datascience/hzheng/build_qe_sophia_v8/openblas_install"
+  fftw: "/eagle/datascience/hzheng/software/sophia/fftw3"
+  libxml2: "/eagle/datascience/hzheng/software/sophia/libxml2"
+  hdf5: "/eagle/datascience/hzheng/software/sophia/hdf5"
+  boost: "/eagle/datascience/hzheng/software/sophia/boost_full"
+
+modules:
+  - compilers/openmpi/5.0.3
+
+setup:
+  - "module use /soft/modulefiles"
+  - "module load compilers/openmpi/5.0.3"
+  - "export OMPI_CC=/usr/bin/gcc"
+  - "export OMPI_CXX=/usr/bin/g++"
+  - "export OMPI_FC=/usr/bin/gfortran"
+  # Pin /soft openmpi at front of PATH and library search order (avoids conda openmpi bleed-in)
+  - "export PATH=/soft/compilers/openmpi/5.0.3/bin:/usr/bin:$PATH"
+  - "export LIBRARY_PATH=/soft/compilers/openmpi/5.0.3/lib:${LIBRARY_PATH:-}"
+  - "export LD_LIBRARY_PATH=/soft/compilers/openmpi/5.0.3/lib:/eagle/datascience/hzheng/software/sophia/hdf5/lib:/eagle/datascience/hzheng/software/sophia/libxml2/lib:/eagle/datascience/hzheng/software/sophia/fftw3/lib:/eagle/datascience/hzheng/build_qe_sophia_v8/openblas_install/lib:${LD_LIBRARY_PATH:-}"
+  - "export PATH=/eagle/datascience/hzheng/software/sophia/qmcpack/bin:$PATH"
+
+gpu_support: false
+gpu_notes: "CPU-only build (Sophia AMD EPYC, no GPU offload configured). Compiled with -march=znver2 -O3."
+
+run_command: |
+  mpirun -n <ranks> --bind-to none qmcpack input.xml
+
+input_files: [".xml"]
+
+# --- Auto-detection ---
+keywords: ["quantum Monte Carlo", "QMC", "diffusion Monte Carlo", "DMC", "variational Monte Carlo", "VMC", "electronic structure", "many-body"]
+aliases: ["qmcpack", "qmc"]
+
+input_detection:
+  extensions: [".xml"]
+  filenames: []
+  content_markers: ["<simulation", "<qmcsystem", "<wavefunction", "<hamiltonian"]
+
+# --- Smart defaults ---
+defaults:
+  nodes: 1
+  walltime: 3600
+  queue: "sophia"
+  account: "datascience"
+
+scaling_notes: "CPU build — Sophia nodes are AMD EPYC; use all available cores. Set OMP_NUM_THREADS to a divisor of cores-per-rank for hybrid MPI+OpenMP."
+
+# --- Input validation ---
+required_inputs: [".xml"]
+optional_inputs: [".h5", ".wfn"]
+
+# --- Output retrieval ---
+output_patterns: ["*.scalar.dat", "*.dmc.dat", "*.stat.h5", "qmc.s*.scalar.dat"]
+
+build_notes: |
+  Built 2026-05-02 via jobs/sophia/build_qmcpack/run_v7.sh on sophia-services queue (5m41s).
+  v7 winning recipe took 7 iterations (5 bootstrap layers + 1 linker fix):
+    v3: bootstrap FFTW3 (sterile env -i PATH=/usr/bin:/soft/openmpi/bin to dodge conda toolchain hijack)
+    v4: bootstrap LibXml2 (same trick)
+    v5: bootstrap parallel HDF5 1.14.4-3 (same trick)
+    v6: bootstrap full Boost 1.84 via b2 install
+    v7: -Wl,--copy-dt-needed-entries -lopen-pal in CMAKE_EXE_LINKER_FLAGS to fix
+        ld --as-needed elision of libopen-pal (libmpi.so transitive dep)
+  cmake key flags: -DCMAKE_C_COMPILER=mpicc -DCMAKE_CXX_COMPILER=mpicxx
+                   -DCMAKE_C_FLAGS="-march=znver2 -O3" -DBLAS_LIBRARIES=<openblas>
+                   -DLAPACK_LIBRARIES=<openblas> -DFFTW_HOME=<bootstrap>
+                   -DLIBXML2_INCLUDE_DIR=<bootstrap>/include/libxml2
+                   -DLIBXML2_LIBRARY=<bootstrap>/lib/libxml2.so
+                   -DHDF5_ROOT=<bootstrap> -DHDF5_PREFER_PARALLEL=ON
+                   -DBoost_DIR=<bootstrap>/lib/cmake/Boost-1.84.0 -DBOOST_ROOT=<bootstrap>
+                   -DCMAKE_EXE_LINKER_FLAGS="-Wl,--copy-dt-needed-entries -lopen-pal -L/soft/openmpi/lib"
+                   -DQMC_MPI=1 -DQMC_OMP=1 -DQMC_COMPLEX=0 -DQMC_GPU=""
+  See projects/software_build/README.md tier-2 row #8 + T-new-22, T-new-32, T-new-33.
+
+notes: "Pure CPU build for Sophia AMD EPYC. Installed binaries: qmcpack, qmc, qmc-extract-eshdf-kvectors, convert4qmc, convertpw4qmc, ppconvert, qmcfinitesize, qmc-check-affinity. The 5-layer dependency stack is a one-time cost; subsequent rebuilds re-use the /eagle/.../software/sophia/{fftw3,libxml2,hdf5,boost_full} installs."

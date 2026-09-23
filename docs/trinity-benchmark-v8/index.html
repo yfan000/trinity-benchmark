@@ -46,12 +46,12 @@ td.low{color:var(--accent);font-weight:600}
 
   <h2>Result</h2>
   <table>
-    <tr><th>Model</th><th>Software</th><th>Input</th><th>Resource</th><th>Batch</th><th>Total</th></tr>
-    <tr><td>nemotron-3-ultra</td><td>16</td><td class="low">6</td><td>18</td><td>20</td><td>60/80 · 75%</td></tr>
+    <tr><th>Model</th><th>Software</th><th>Input prep</th><th>Resource</th><th>Batch</th><th>Total</th></tr>
+    <tr><td>nemotron-3-ultra</td><td>16</td><td class="low">7</td><td>18</td><td>20</td><td>61/80 · 76%</td></tr>
     <tr><td>gemma-4-31b</td><td>16</td><td class="low">6</td><td>19</td><td>16</td><td>57/80 · 71%</td></tr>
-    <tr><td>gpt-oss-120b</td><td>10</td><td class="low">4</td><td>20</td><td>10</td><td>44/80 · 55%</td></tr>
-    <tr><td>llama-3.1-8b</td><td>18</td><td class="low">0</td><td>7</td><td>12</td><td>37/80 · 46%</td></tr>
-    <tr class="tot"><td>All models</td><td>60/80</td><td class="low">16/80</td><td>64/80</td><td>58/80</td><td>198/320 · 62%</td></tr>
+    <tr><td>gpt-oss-120b</td><td>10</td><td class="low">4</td><td>19</td><td>17</td><td>50/80 · 62%</td></tr>
+    <tr><td>llama-3.1-8b</td><td>18</td><td class="low">0</td><td>6</td><td>11</td><td>35/80 · 44%</td></tr>
+    <tr class="tot"><td>All models</td><td>60/80</td><td class="low">17/80</td><td>62/80</td><td>64/80</td><td>203/320 · 63%</td></tr>
   </table>
 
   <h2>Report</h2>
@@ -59,21 +59,6 @@ td.low{color:var(--accent);font-weight:600}
     <a class="card" href="trinity_benchmark_report.pdf"><b>Benchmark report (PDF, 4pp)</b>
       <span>The table above, per-model failure patterns split by subtask with judge evidence,
       and what the numbers survived.</span><code>trinity_benchmark_report.pdf</code></a>
-  </div>
-
-  <h2>Read the write-up</h2>
-  <div class="grid">
-    <a class="card" href="trinity_augmentation_v8.html"><b>What the prompt supplies</b>
-      <span>The augmentation ablation: strip the catalog material from the prompt and the same
-      corpus scores 27/160 instead of 99/160. Per model and per stage, with the capability-only
-      view beside it.</span><code>trinity_augmentation_v8.html</code></a>
-    <a class="card" href="../docs/findings.md"><b>Findings</b>
-      <span>The table with what it does and does not support: per-model and per-subtask failure
-      patterns, the null A/B, the one severity call that moves the
-      headline.</span><code>docs/findings.md</code></a>
-    <a class="card" href="../docs/methodology.md"><b>Methodology</b>
-      <span>How a grade is produced, step by step, with each step's known
-      weakness stated at that step.</span><code>docs/methodology.md</code></a>
   </div>
 
   <h2>Browse the evidence</h2>
@@ -88,13 +73,10 @@ td.low{color:var(--accent);font-weight:600}
     <a class="card" href="trinity_rules_v8.html"><b>Grading rules</b>
       <span>Every requirement applied to each sample: what decides it, where it came from, and
       the source YAML behind it.</span><code>trinity_rules_v8.html</code></a>
-    <a class="card" href="trinity_bare_vs_rich_v8.html"><b>Unaugmented vs augmented, per item</b>
-      <span>All 160 items: both prompts in full, both answers, and the judge's decision on every
-      requirement for each arm side by side.</span><code>trinity_bare_vs_rich_v8.html</code></a>
     <a class="card" href="trinity_arm_inspector_v8.html"><b>Prompt A/B inspector</b>
       <span>Both prompt arms per anchor with the catalog-enrichment diff
       highlighted.</span><code>trinity_arm_inspector_v8.html</code></a>
   </div>
 
-  <p class="meta">corpus v8 · rubric r28 · judge gpt56terra (Argo) at k=3 · 2026-09-21 · every number derived from the graded corpus, not typed in</p>
+  <p class="meta">corpus v8 · rubric r28 · judge gpt56terra (Argo) at k=3 · 2026-09-20</p>
 </div>

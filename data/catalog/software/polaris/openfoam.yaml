@@ -1,0 +1,70 @@
+name: "OpenFOAM"
+description: "Open-source CFD toolbox for fluid dynamics, heat transfer, and combustion simulations"
+category: simulation
+version: "11"
+
+binary: "/eagle/datascience/hzheng/build_openfoam/OpenFOAM-11/platforms/linux64GccDPInt32Opt/bin/foamRun"
+install_path: "/eagle/datascience/hzheng/build_openfoam/OpenFOAM-11"
+
+modules: []
+
+setup:
+  - "module load PrgEnv-gnu"
+  - "module swap gcc-native gcc-native/12.3"
+  - "module load cray-mpich"
+  - "source /eagle/datascience/hzheng/build_openfoam/OpenFOAM-11/etc/bashrc WM_MPLIB=SYSTEMMPI FOAM_INST_DIR=/eagle/datascience/hzheng/build_openfoam"
+
+gpu_support: false
+gpu_notes: "Standard OpenFOAM is CPU-only. GPU-capable variants (e.g., OpenFOAM with AmgX) require separate configuration."
+
+run_command: |
+  decomposePar
+  mpiexec -n 16 --ppn 4 foamRun -solver incompressibleFluid -parallel
+
+input_files: []
+
+# --- Auto-detection ---
+keywords: ["openfoam", "CFD", "computational fluid dynamics", "Navier-Stokes", "turbulence", "RANS", "LES", "heat transfer", "combustion", "finite volume", "incompressible flow", "compressible flow", "multiphase", "simpleFoam", "pimpleFoam"]
+aliases: ["openfoam", "of", "foam", "simpleFoam", "pimpleFoam", "rhoPimpleFoam"]
+
+input_detection:
+  extensions: []
+  filenames: ["controlDict", "fvSchemes", "fvSolution", "blockMeshDict", "decomposeParDict"]
+  content_markers: ["FoamFile", "application", "startFrom", "deltaT", "endTime", "OpenFOAM"]
+
+# --- Smart defaults ---
+defaults:
+  nodes: 1
+  walltime: 1800
+  queue: "debug"
+  ppn: 4
+
+scaling_notes: "Use decomposePar to split mesh before parallel runs. Set numberOfSubdomains in decomposeParDict to match total MPI ranks. Run reconstructPar after simulation to merge results. 4 MPI ranks per node."
+
+# --- Input validation ---
+required_inputs: ["controlDict", "fvSchemes", "fvSolution"]
+optional_inputs: ["blockMeshDict", "snappyHexMeshDict", "decomposeParDict"]
+
+# --- Output retrieval ---
+output_patterns: ["postProcessing/", "[0-9]*/", "log.*", "*.foam"]
+
+notes: "Build OpenFOAM from source with ThirdParty (SCOTCH, CGAL). Source $FOAM_BASHRC before running. Mesh decomposition required for parallel runs. Use foamToVTK or paraview for visualization."
+
+build_status: "built"
+build_notes: |
+  Built 2026-05-12 via jobs/polaris/build_openfoam/run_v2.sh, job 7147278 on genesisdemo
+  reservation (1 node, 32 cores, ~22 min).
+  Source: /eagle/datascience/hzheng/build_openfoam/OpenFOAM-11
+  ThirdParty: /eagle/datascience/hzheng/build_openfoam/ThirdParty-11 (Scotch + PTScotch built)
+  Platform: linux64GccDPInt32Opt (GCC 12.3 + cray-mpich SYSTEMMPI)
+  130+ executables in platforms/linux64GccDPInt32Opt/bin/
+
+  IMPORTANT — OF-11 solver architecture change:
+  simpleFoam no longer exists as a standalone binary in OpenFOAM-11.
+  Use: foamRun -solver incompressibleFluid   (replaces simpleFoam)
+       foamRun -solver incompressibleFluidPimple (replaces pimpleFoam)
+       foamRun -solver compressibleFluid     (replaces rhoPimpleFoam)
+
+  Environment setup:
+    source /eagle/datascience/hzheng/build_openfoam/OpenFOAM-11/etc/bashrc \
+        WM_MPLIB=SYSTEMMPI FOAM_INST_DIR=/eagle/datascience/hzheng/build_openfoam

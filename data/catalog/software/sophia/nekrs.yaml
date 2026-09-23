@@ -1,0 +1,13 @@
+build_status: built
+name: "NekRS"
+description: "GPU-accelerated spectral element CFD solver on Sophia (V100)"
+category: simulation
+version: "main"
+
+binary: "/eagle/datascience/hzheng/software/sophia/nekrs/bin/nekrs"
+install_path: "/eagle/datascience/hzheng/software/sophia/nekrs"
+
+gpu_support: true
+
+keywords: ["NekRS", "Navier-Stokes", "CFD", "spectral element"]
+aliases: ["nekrs"]
