@@ -57,12 +57,30 @@ contracts:
     file: ".par"
     binary: [".re2"]          # the mesh is a compiled binary, produced by the meshing tools
     mandatory: ["[GENERAL]"]
-    expected:  ["[MESH]", "[PRESSURE]", "[VELOCITY]"]
+    expected:  ["[MESH]"]
     note: >-
-      Only [GENERAL] is unconditional — it carries dt, numSteps and polynomialOrder. [VELOCITY]
-      and [PRESSURE] are solver blocks that a case may legitimately omit or inherit, and [MESH]
-      is optional when the mesh comes from the .re2. All three were flagged on correct decks.
-    source: "format:nekRS .par is INI-style; [GENERAL] is the only required section"
+      Only [GENERAL] is unconditional — it carries dt, numSteps and polynomialOrder. [MESH] is
+      optional when the mesh comes from the .re2, and was flagged on correct decks.
+
+      [PRESSURE] and [VELOCITY] were REMOVED from `expected` because the section names are
+      version-dependent and this file is keyed by application, not by (application, version).
+      nekRS renamed them to [FLUID PRESSURE] / [FLUID VELOCITY] between v23 and master. The
+      catalog installs BOTH: aurora records v23, while polaris ("next") and frontier
+      ("git-main") are recent. So the old spelling is right for one anchor and wrong for two,
+      and no single app-keyed list can be correct for all three.
+
+      This was not theoretical. The exemplar shipped in the Input-preparation prompt is a real
+      deck from nekRS master and uses [FLUID VELOCITY] / [FLUID PRESSURE], so the prompt gave
+      the model two different spellings of the same section and called both authoritative.
+      nemotron-3-ultra then wrote [VELOCITY], [PRESSURE] and [MESH] — all three taken from this
+      list — alongside an invented [FLUID], and was marked violated for inventing keywords.
+      Three of the nine sections it wrote came from here.
+
+      Leaving them out follows this file's own rule: these are `expected` only, never required,
+      so removing them costs a judge nothing and stops the prompt teaching a spelling that is
+      wrong on two of the three systems that install the code.
+    source: "format:nekRS .par is INI-style; [GENERAL] is the only required section.
+              Section names below [GENERAL] are version-dependent — see note."
 
   qe:
     file: ".in"

@@ -14,7 +14,14 @@ test, so they teach grammar without carrying the answer.
 from __future__ import annotations
 from pathlib import Path
 
-EX = Path(__file__).resolve().parent.parent / "results" / "skills" / "trinity" / "examples"
+# The repo reorganisation moved these to data/worked_examples/ and this path was not updated,
+# so worked_deck() and worked_script() returned "" for every application. Nothing raised:
+# prompt.py guards the block with `if example:`, so a generation run would simply have shipped
+# Input-preparation and Batch-job prompts with no worked example and no warning. The frozen v8
+# corpus predates the move and still has its examples, which is why nothing looked wrong.
+EX = Path(__file__).resolve().parent.parent / "data" / "worked_examples"
+if not EX.is_dir():                     # fail loudly rather than silently degrade the prompt
+    raise RuntimeError(f"worked-example directory missing: {EX}")
 
 CONVENTIONS = {
  "PBS Pro": """- Directives are NOT shell-expanded: never use $VAR or ${VAR} in #PBS -o/-e paths.

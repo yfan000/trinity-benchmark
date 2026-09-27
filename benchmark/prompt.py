@@ -254,11 +254,23 @@ def generate_trinity_sample(subtask: str, goal: str, domain: str, system: str,
             _cur.append(_ln)
         _blocks.append(_cur)
         _per = 44 if len(_blocks) == 1 else 40
-        _out = []
+        # Clip, but keep the notice OUT of the example body. It used to be appended inline as
+        # "[... N more lines of this file omitted — the form above is what matters]", which put
+        # an ellipsis inside the one block the generator is told to reproduce verbatim. It
+        # reached the model as part of the example: 5 of 40 v8 prompts carried it, and one
+        # answer copied the string into a deliverable, where INP.common.no_truncation then
+        # penalised it. Cells whose prompt carried the marker were truncated 40% of the time
+        # against 15% for cells without it — heavily confounded, because the decks long enough
+        # to clip are also the largest ones a model would abridge anyway, so that gap is not
+        # evidence of causation. The fix stands on the simpler ground: a demonstration of the
+        # required form should not itself demonstrate eliding.
+        _out, _abridged = [], []
         for _b in _blocks:
             if len(_b) > _per:
-                _b = _b[:_per] + [f"[... {len(_b) - _per} more lines of this file omitted —"
-                                  f" the form above is what matters]"]
+                _name = next((ln for ln in _b if ln.startswith("# ===== ")), "").strip("# =") \
+                    or "the example"
+                _abridged.append(f"{_name} ({len(_b) - _per} lines)")
+                _b = _b[:_per]
             _out += _b
         ex = "\n".join("                  " + ln for ln in _out)
         what = ("a script for a DIFFERENT application whose resources"
@@ -270,6 +282,13 @@ def generate_trinity_sample(subtask: str, goal: str, domain: str, system: str,
                        f"                marked as {what} must NOT be\n"
                        "                copied — it demonstrates the required form only:\n"
                        + ex + "\n")
+        if _abridged:
+            conv_block += ("                The example was shortened here for prompt length —\n"
+                           f"                lines were dropped from {', '.join(_abridged)}.\n"
+                           "                State in the sample that this shortening is an\n"
+                           "                artifact of the example and not a style to copy: the\n"
+                           "                files the agent writes must be complete, with no\n"
+                           "                ellipsis or 'omitted for brevity' placeholder.\n")
     if account:
         conv_block += (f"  Account: state in the Workload that the project allocation to charge\n"
                        f"                is `{account}`. Withholding it forces a placeholder into\n"

@@ -558,8 +558,21 @@ def _invokes_app(req, ctx) -> tuple[str, str]:
     return "violated", f"no launcher references {ctx['app']} or its binary"
 
 
-GPU_CLAIM = re.compile(r"\b(gpu[- ]?(accel|offload|enabled|support)|cuda|sycl|rocm|hip|xpu|"
-                       r"offload(ed|ing)? to (the )?gpu|gpu[- ]resident)\b", re.I)
+# The trailing \b used to sit after the whole alternation, which silently killed every
+# inflected form: `offload` was listed and `GPU offloading` still did not match, nor did
+# `GPU accelerators`, `GPU-accelerated` or `GPU implementation`. The check only ever fired at
+# all because the qe@aurora answers happened to contain a bare `SYCL` or `XPU` token; the
+# judge caught 56 violations where the code caught 21, and this is most of that gap.
+GPU_CLAIM = re.compile(r"\b(gpu[- ]?(accel\w*|offload\w*|enabl\w*|support\w*|implementation)|"
+                       r"cuda|sycl|rocm|hip|xpu|offload(ed|ing)? to (the )?gpu|"
+                       r"gpu[- ]resident)", re.I)
+
+# ...and a bare search then read "the build has NO GPU support" as a GPU claim. A CPU-only
+# answer correctly saying so was one regex away from a `major` deduction for saying the true
+# thing. Only the 45 characters before the match are inspected, so a negation earlier in the
+# sentence about something else does not suppress a real claim.
+GPU_NEGATED = re.compile(r"\b(no|not|without|lacks?|lacking|never|non|cpu[- ]only|disabled|"
+                         r"unsupported|absent)\b[^.]{0,45}$", re.I)
 
 
 def _claims_match_catalog(req, ctx) -> tuple[str, str]:
@@ -574,6 +587,15 @@ def _claims_match_catalog(req, ctx) -> tuple[str, str]:
     The three that were real all had the same shape: `qe@aurora` has `gpu_support: False`, and
     three different models claimed SYCL/XPU offload for it. That is worth catching and is
     pure comparison, so it belongs in code. Silence is never contradiction.
+
+    KNOWN FALSE POSITIVE, left in deliberately. The regex cannot tell a claim about the BUILD
+    from a true statement about the MACHINE. "the Aurora system ... has Intel Data Center GPU
+    accelerators" is correct and is not a contradiction of `gpu_support: false` for Quantum
+    ESPRESSO, but it matches; one v8 answer (llama-3.1-8b, base, qe@aurora) trips it and the
+    judge rightly called that row satisfied. It is left because in skill mode this verdict is
+    stored as a `code_verdict` and is NOT shown to the judge and does NOT decide the score, so
+    the cost is one point of code/judge disagreement rather than a wrong grade. If this check
+    is ever promoted to deciding, that distinction has to be made first.
     """
     # This check only compares ONE field — gpu_support — while the requirement covers module
     # names, install paths, dependencies and how the code is loaded as well. So it may only
@@ -588,10 +610,11 @@ def _claims_match_catalog(req, ctx) -> tuple[str, str]:
     if gs:
         return "not_evaluated", ("gpu_support is true so no GPU contradiction is possible; "
                                  "other facility claims still need checking")
-    m = GPU_CLAIM.search(ctx["answer"])
+    m = next((m for m in GPU_CLAIM.finditer(ctx["answer"])
+              if not GPU_NEGATED.search(ctx["answer"][max(0, m.start() - 45):m.start()])), None)
     if not m:
-        return "not_evaluated", ("CPU-only build and no GPU claim made; other facility "
-                                 "claims still need checking")
+        return "not_evaluated", ("CPU-only build and no unnegated GPU claim made; other "
+                                 "facility claims still need checking")
     line = ctx["answer"][max(0, m.start() - 70):m.end() + 40].replace("\n", " ")
     return "violated", (f"catalog records gpu_support: false, but the answer claims "
                         f"{m.group(0)!r} — ...{line.strip()[:90]}")

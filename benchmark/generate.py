@@ -121,14 +121,87 @@ def scheduler(system: str) -> str:
     return catalog.scheduler_kind(system)
 
 
-def installed(system: str) -> str:
-    """The software catalog an agent would consult on that system."""
+DESC_BUDGET = 110
+
+# How a capability fact is spelled into a catalog line, when an arm asks for one. The two
+# renderers must differ ONLY in wording and carry exactly the same fact, because the whole
+# point of having both is to price presentation against content. Both are wrapped in the same
+# brackets for the same reason.
+CAPABILITY_RENDERERS = {
+    "none":  lambda d: "",
+    "bool":  lambda d: ("" if d.get("gpu_support") is None
+                        else f"gpu_support: {str(bool(d['gpu_support'])).lower()}"),
+    "prose": lambda d: ("" if d.get("gpu_support") is None
+                        else "GPU-accelerated build" if d["gpu_support"]
+                        else "CPU-only build; no GPU offload"),
+}
+
+
+def _clip(text: str, budget: int) -> str:
+    """Clip to `budget` characters on a word boundary, never mid-word.
+
+    This was `description[:72]`, which cut 58 of the 142 catalog entries mid-word. Half a
+    sentence is worse than a short one, and the damage was not uniform: it turned Quantum
+    ESPRESSO on Aurora into "...electronic structure calculations on Aurora with" — dropping
+    " Intel oneAPI" — while every GPU-flavoured neighbour in the same listing survived intact.
+    It also severed the CPU-only marker from the entries that carried one, leaving
+    "scientific computing on Crux (C" and "(CPU-only; gpu4pyscf req". A model reading that
+    listing is being shown a page on which the accelerated codes are legible and the CPU-only
+    ones trail off, which is the opposite of what the catalog says.
+    """
+    text = " ".join((text or "").split())
+    if len(text) <= budget:
+        return text
+    return text[:budget].rsplit(" ", 1)[0].rstrip(" ,;:-—") + "…"
+
+
+def installed(system: str, *, capability: str = "bool") -> str:
+    """The software catalog an agent would consult on that system.
+
+    `capability` selects whether each line also carries the entry's `gpu_support` fact, and in
+    which spelling.
+
+    THE DEFAULT IS "bool", AND IT WAS MEASURED. Every published v8 arm used "none" — the field
+    was not shown to any model, in any arm, ever, while
+    `SOFT.common.claims_true_to_catalog` graded against it. "The answer contradicts the supplied
+    catalog" was not a statement about anything the model had been supplied.
+
+    The v9 experiment put it in front of two models over 39 anchors, three arms against a paired
+    control. Rendering it as `[gpu_support: false]` fixed all 6 treated violations and broke
+    none (18/24 -> 24/24, exact McNemar p=0.031), with no movement on the 52 control cells whose
+    entry records `gpu_support: true`, and no regression in
+    `SOFT.common.correct_application` (72/78 -> 75/78).
+
+    The prose spelling ("CPU-only build; no GPU offload") fixed the same six and did NOT do
+    better — it missed significance at p=0.125. So the terse machine-readable form is the one
+    that ships; see `benchmark/arm_capability.py` for the arms and `audit/capability_ab.py` for
+    the comparison.
+    """
+    render = CAPABILITY_RENDERERS[capability]
     names = []
     for f in sorted((CATALOG / "software" / system).glob("*.yaml")):
         if f.stem.startswith("_"):
             continue
         d = app_yaml(system, f.stem)
-        names.append(f"{d.get('name', f.stem)} — {(d.get('description') or '')[:72]}")
+        line = d.get("name") or d.get("app") or f.stem
+        # Frontier's 19 entries were authored against a different schema — `app`/`notes`
+        # instead of `name`/`description` — so 14 of them rendered as a bare "alphafold — "
+        # with nothing after the dash. Three quarters of that system's catalog was blank, which
+        # made its Software-selection anchors trivial: vllm@frontier had one of only five
+        # entries carrying any text at all, and all four models picked it.
+        #
+        # `notes` is NOT a description and is deliberately not used as one. It holds build-log
+        # commentary — "Built during tier-1 campaign.", "Use make -j 1 (not make -j N) — parallel
+        # make hits a race condition" — which would be worse than silence: the model would read
+        # it as what the software IS. Nothing is invented here. Where the catalog records no
+        # description, the line states what the catalog DOES record and stops.
+        if (desc := _clip(d.get("description"), DESC_BUDGET)):
+            line += f" — {desc}"
+        elif (ver := d.get("version")):
+            line += f" — version {ver}" + (f", {st}" if (st := d.get("status")) else "")
+        if (tag := render(d)):
+            line += f"  [{tag}]"
+        names.append(line)
     return "\n".join(names)
 
 
