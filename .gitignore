@@ -4,3 +4,12 @@ __pycache__/
 .env
 .DS_Store
 build/
+
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.synctex.gz
+paper/*/main.pdf
