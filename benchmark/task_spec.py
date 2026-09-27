@@ -191,9 +191,21 @@ ANCHORS = [
     ('Dense linear algebra',                     'hpl',            'crux'),
     ('Molecular dynamics',                       'lammps',         'crux'),
     ('Electronic structure (DFT)',               'qe',             'crux'),
-    ('Molecular dynamics (AMD GPU)',             'gromacs_hip',    'frontier'),
-    ('Protein structure prediction (open)',      'openfold',       'frontier'),
-    ('LLM inference serving',                    'vllm',           'frontier'),
+    # Frontier's three anchors were REMOVED. 14 of its 19 catalog entries were authored
+    # against an `app`/`notes` schema and carry no `description`, so the Software-selection
+    # listing rendered three quarters of that system as a bare "alphafold — " with nothing
+    # after the dash. Only five entries carried any text, which made the task degenerate:
+    # vllm@frontier was one of the five and all four models picked it. Every other system in
+    # the catalog is fully populated, so the defect is Frontier's alone.
+    #
+    # The renderer no longer emits blank lines (it falls back to the recorded version and
+    # status), but that is a presentation fix, not a content one — the descriptions still do
+    # not exist. Keeping the anchors would mean scoring models on a catalog three quarters of
+    # which says nothing about what the software does. Restore them when the entries are
+    # written; the files are data/catalog/software/frontier/*.yaml.
+    # ('Molecular dynamics (AMD GPU)',           'gromacs_hip',    'frontier'),
+    # ('Protein structure prediction (open)',    'openfold',       'frontier'),
+    # ('LLM inference serving',                  'vllm',           'frontier'),
     ('Protein structure prediction',             'alphafold',      'perlmutter'),
     ('Cosmology',                                'hacc',           'perlmutter'),
     ('Molecular dynamics (biophysics)',          'openmm',         'perlmutter'),
@@ -385,6 +397,37 @@ EXTRA_RULES = {
         "directives pointing at concrete paths under the stated working directory, an "
         "explicit change into that directory using the scheduler's own variable rather than a "
         "hardcoded path, and creation of any directory those paths reference."),
+
+    # Software selection had NO entry here until now, and the paragraph above explains why:
+    # v3's version of exactly this instruction regressed wrong-application picks 2/30 -> 6/28
+    # by teaching models that a sparse catalog entry disqualifies a code. That is a real
+    # hazard and the wording below is shaped around it -- it constrains only what may be
+    # ASSERTED, and says in as many words that a thin entry is not evidence against an
+    # application.
+    #
+    # Added on measurement, not on argument. The v9 `contract` arm ran this clause over 39
+    # anchors and two models against a paired control:
+    #
+    #   no_vague_performance_claims   61/78 -> 74/78   13 fixed, 0 broken, p=0.0002
+    #   claims_true_to_catalog        18/24 -> 23/24   on the treated cells
+    #   correct_application           72/78 -> 74/78   THE GUARD RAIL -- did not regress
+    #
+    # no_vague_performance_claims is the rule augmentation never moved: 10 violations bare,
+    # 6 base, 10 rich, and worse for gpt-oss with more context. An instruction fixed what more
+    # information could not.
+    #
+    # KNOWN SIDE EFFECT, measured and left visible: the clause makes models report honestly
+    # that the catalog is silent about a property, and the judge then marks that wrong because
+    # it holds a field the model was never shown. Rendering `gpu_support` into the listing
+    # removes most of this; any field the rubric grades on and the prompt withholds will
+    # reproduce it.
+    "Software selection": (
+        "\nThe prompt must additionally require the agent to state only facility properties "
+        "that the supplied catalog records — GPU support, module names, install paths, how "
+        "the code is loaded. Where the catalog does not record a property, it should say "
+        "nothing about it rather than inferring it from the machine or from the application's "
+        "capabilities elsewhere. A sparse catalog entry is NOT evidence against an "
+        "application; it is only a reason not to make claims the entry does not support."),
 }
 
 for _st, _extra in EXTRA_RULES.items():
@@ -436,10 +479,26 @@ def apply_arm(arm: str) -> dict:
 # The 10-anchor evaluation subset (40 samples: 10 x 4 subtasks).
 #
 # Stratified rather than sampled, so a 40-sample run still spans what varies:
-#   all 7 systems - both schedulers (Perlmutter and Frontier are Slurm, the rest PBS Pro)
-#   9 distinct applications across 9 scientific domains
+#   all 6 remaining systems - both schedulers (Perlmutter is Slurm, the rest PBS Pro)
+#   10 distinct applications across 10 scientific domains
 #   3 of the 10 have a verified upstream input deck (nwchem, lammps, qe) and 7 do not, so
 #   the effect of the Input-preparation worked example stays visible rather than assumed.
+#
+# TWO CORRECTIONS TO THE LINES ABOVE, both of which used to be wrong.
+#
+# It said "9 distinct applications across 9 scientific domains". It is TEN of each, and always
+# was — count the list. The paper repeated the nine from this comment rather than from the data.
+#
+# It said "all 7 systems". Frontier's three anchors were removed because 14 of its 19 catalog
+# entries have no description (see ANCHORS), so the subset now spans six. vllm@frontier was in
+# this list and has been replaced by vllm@perlmutter, which keeps both the LLM-inference-serving
+# domain and Slurm coverage.
+#
+# That substitution costs one thing and it should not be quietly absorbed: the placebo stratum
+# is now ONE anchor, not two. It was vllm@frontier and pytorch@sophia — both deliberately sparse
+# entries, there to bound how much of any augmentation effect comes from context that says
+# nothing. Perlmutter's catalog is fully populated, so vllm@perlmutter is not a replacement for
+# that role. Restoring a second sparse anchor needs a deliberate choice, not a swap.
 # ---------------------------------------------------------------------------------------
 SUBSET = [
     ("Computational chemistry",             "nwchem",    "polaris"),
@@ -450,7 +509,7 @@ SUBSET = [
     ("Dense linear algebra",                "hpl",       "crux"),
     ("Molecular dynamics (biomolecular)",   "gromacs",   "sirius"),
     ("Protein structure prediction",        "alphafold", "perlmutter"),
-    ("LLM inference serving",               "vllm",      "frontier"),
+    ("LLM inference serving",               "vllm",      "perlmutter"),
     ("Deep learning training",              "pytorch",   "sophia"),
 ]
 assert all(a in ANCHORS for a in SUBSET), "subset must be drawn from verified anchors"
