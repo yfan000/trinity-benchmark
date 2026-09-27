@@ -58,10 +58,28 @@ requirements:
     check: {kind: claims_match_catalog}
     dimension: correctness
     severity: major
-    source: "catalog:software/<system>/<app>.yaml"
+    source: "catalog:software/<system>/<app>.yaml AND catalog:systems/<system>.yaml#scheduler"
     rationale: >-
       Deliberately scoped to fields the catalog HAS. The v3 version also forbade saying
       anything about fields the catalog lacks, which is what caused the regression.
+
+      The `source` above used to name only the software catalog, while the grading key handed
+      to the judge also carries `scheduler`, merged in from systems/<system>.yaml. Eight of the
+      rule's 56 v8 firings rest on that field — every one of them a model volunteering that a
+      PBS Pro system is "fully slurm-compatible" or proposing #SBATCH on Aurora. The label was
+      wrong, not the behaviour, so this widens the label.
+
+      Deliberately NOT changed: `scheduler` is absent from all 10 Software-selection prompts in
+      both arms, so this rule does grade a field the model is never shown — the same shape as
+      the gpu_support defect. It is left that way for a reason. Unlike gpu_support, which is a
+      property of the application being chosen and without which the rule was unanswerable, the
+      scheduler is a property of the SYSTEM and has no bearing on which application fits the
+      science. A model that says nothing about it loses nothing, which is why this rule is
+      registered `mixed` in knowledge_dependence.yaml — satisfiable by abstention.
+
+      The v9 contract clause now discourages exactly this kind of volunteered facility claim,
+      and the arms bear that out: scheduler-based firings were 1 of 19 violation rows in the
+      base arm and 0 of 9 under `contract`.
 
 free_choice:
   - axis: "sparse catalog entries"
