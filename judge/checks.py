@@ -295,14 +295,28 @@ def _file_present(req, ctx) -> tuple[str, str]:
 
 
 def _no_contents_for(req, ctx) -> tuple[str, str]:
-    """A binary file must be referenced, never authored with contents."""
-    vals = req["check"].get("values") or catalog_get(req, ctx, "__rubric.binary_files") or []
+    """A binary file must be referenced, never authored with contents.
+
+    TWO SOURCES, UNIONED, because they had drifted apart and the check was the loser. The
+    prompt's "DO NOT write contents for ..." list is built from format_contracts `binary:`,
+    while this check read only the rubric's `binary_files:`. Those lists disagreed: the prompt
+    told the model not to author a qmcpack `.h5`, and the check had no idea `.h5` existed.
+    `binary_files` was declared for just two applications, so for qmcpack, pytorch, alphafold,
+    nwchem and the rest the check fell straight through to the branch below.
+
+    That branch used to return SATISFIED — an affirmative "this application has no binary or
+    runtime-generated inputs" — which is simply false for an application whose own prompt names
+    one. It was a false pass, not a missing measurement, and it would have rubber-stamped every
+    answer had this rule ever been promoted to deciding. The judge caught all three v8
+    violations while the code reported satisfied on all three.
+    """
+    vals = (req["check"].get("values")
+            or sorted({*(catalog_get(req, ctx, "__rubric.binary_files") or []),
+                       *(format_contract_for(ctx.get("app", "")).get("binary") or [])}))
     if not vals:
-        # Worst-agreeing rule in the library at 20%: it returned not_applicable for every app
-        # without a declared binary list, while the human correctly read "did not fabricate
-        # binary contents" as trivially SATISFIED. An app with no binary inputs cannot fail
-        # this, so say so rather than standing down.
-        return "satisfied", "this application has no binary or runtime-generated inputs"
+        return "not_evaluated", ("no binary or runtime-generated inputs recorded for "
+                                 f"{ctx.get('app')!r} in either the rubric or "
+                                 "format_contracts; the claim still needs judging")
     bad = []
     for ext in vals:
         # a fenced block whose header or preceding line names the binary file
