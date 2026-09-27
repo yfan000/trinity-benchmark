@@ -1056,5 +1056,33 @@
     ]
    }
   ]
+ },
+ "r30": {
+  "parent": "r28",
+  "created": "2026-09-27",
+  "files": {
+   "_common.yaml": "b0b2bfae",
+   "batch_job_creation/_common.yaml": "5e2045a9",
+   "batch_job_creation/slurm.yaml": "4873ea85",
+   "input_preparation/_common.yaml": "8531cbdf",
+   "input_preparation/gromacs.yaml": "4c40c110",
+   "input_preparation/hpl.yaml": "083d0b37",
+   "input_preparation/qe.yaml": "6683a330",
+   "resource_selection/_common.yaml": "50759943",
+   "software_selection/_common.yaml": "3bc09768"
+  },
+  "rationale": "Adds a numerical tolerance to INP.common.values_match_physical_system: 0.5 deg on an angle, 1% on a length, 2% on a count/concentration/duration. The rule had NO tolerance, so it scored a fourth-decimal rounding artifact the same as a 20x error in simulated duration. It is the largest defect class in the benchmark (21 of 29 failing Input-preparation cells in the v8 rich arm), which is why an over-strict version matters. Found by recomputing the geometries from the coordinates the models wrote (audit/arith_probe.py), not by re-reading verdicts. NOT REPLAYABLE: this rule is judge-decided and the change is to its claim text, so existing verdicts cannot be re-derived under it - unlike r28, which only removed a rule. Measuring the effect requires re-judging the affected cells.",
+  "changes": [
+   {
+    "op": "revise",
+    "id": "INP.common.values_match_physical_system",
+    "motivated_by": [
+     "nemotron-3-ultra/nwchem@polaris: 10/10 decks symmetric, O-H exactly 0.9000-0.9900 as requested, angle 104.41 vs 104.5 - a constant 0.09 deg rounding offset. Marked violated.",
+     "gpt-oss-120b/nwchem@polaris: angles 104.45-104.48, bond lengths correct to 4 dp, one deck 0.0017 A (0.18%) out. Marked violated."
+    ],
+    "note": "Both rows verified by recomputing bond lengths and the H-O-H angle from the Cartesian coordinates in the answers; neither is a physics error.",
+    "note2": "Scope deliberately narrow: only a tolerance. The rule's contradiction-only scoping from the earlier revision is untouched."
+   }
+  ]
  }
 }

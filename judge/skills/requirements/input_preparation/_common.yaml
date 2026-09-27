@@ -165,7 +165,12 @@ requirements:
     claim: "No parameter value CONTRADICTS what the prompt states about the physical system —
             a different atom count, a different temperature, the wrong material. Values the
             prompt leaves open are free: see the 'any value the prompt does not fix' axis.
-            Do not deduct for a cutoff, mesh or timestep merely being unstated in the prompt."
+            Do not deduct for a cutoff, mesh or timestep merely being unstated in the prompt.
+            ROUNDING IS NOT CONTRADICTION. A value that agrees with the prompt to the precision
+            the prompt states it in is satisfied: allow 0.5 deg on an angle, 1% on a length or
+            distance, and 2% on a count, concentration, duration or other derived quantity.
+            Quote the computed value and the requested one whenever you deduct, so the size of
+            the disagreement is visible."
     decided_by: judge
     dimension: correctness
     severity: major
@@ -175,6 +180,24 @@ requirements:
       invited the judge to assess whether every invented value was WELL CHOSEN, which is the
       same overreach that affected four other rules. A value can only be wrong here if the
       prompt says otherwise.
+
+      The tolerance was added in r30 after recomputing the geometries from the coordinates the
+      models actually wrote. This is the largest defect class in the benchmark - 21 of the 29
+      failing Input-preparation cells in the v8 rich arm - so the two rows below are not a
+      rounding detail, they are evidence that the headline number is inflated:
+
+      nemotron-3-ultra / nwchem@polaris wrote all ten decks perfectly symmetric with O-H
+      exactly 0.9000 through 0.9900 as requested, at 104.41 deg - a constant 0.09 deg offset,
+      which is what rounding sin/cos to four decimals gives. Marked violated.
+
+      gpt-oss-120b / nwchem@polaris wrote angles of 104.45-104.48 and bond lengths correct to
+      four decimals, with one deck 0.0017 A (0.18%) out. Marked violated.
+
+      Neither is a physics error and no one running these decks would notice. The rule had no
+      tolerance at all, so it was measuring the fourth decimal place of a rounding artifact and
+      scoring it the same as a 20x error in simulated duration. `audit/arith_probe.py` is the
+      probe that found this; it recomputes these quantities from the answer text and declined
+      to fire where the judge had.
 
 
   # INP.common.not_copied_from_example was REMOVED in r28. It fired on 18 of 40 Input-preparation
