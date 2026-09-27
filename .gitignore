@@ -13,3 +13,6 @@ build/
 *.out
 *.synctex.gz
 paper/*/main.pdf
+*.fdb_latexmk
+*.fls
+paper/*/*.pdf

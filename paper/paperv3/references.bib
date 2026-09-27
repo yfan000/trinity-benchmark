@@ -1,0 +1,490 @@
+% IPDPS 2027 requires complete references: ALL author names (never "et al.") plus a DOI or a
+% direct link. Author lists below were taken from the arXiv API or the publisher page, never from
+% Semantic Scholar or OpenAlex — both corrupt names on large-author papers (TheAgentCompany,
+% IaC-Eval, ScienceAgentBench and MLR-Bench each have 1-3 wrong names in at least one aggregator).
+%
+% Entries marked VERIFY carry a venue taken from an arXiv "comments" field or from recollection
+% rather than from the publisher's own page; confirm each before submission. DBLP, ACM DL and
+% Semantic Scholar were all unreachable during the sweep that produced this file.
+
+% ---------------------------------------------------------------- HPC agents and systems
+@misc{aobench,
+  author       = {Seyedkazemi Ardebili, Mohsen and Bartolini, Andrea},
+  title        = {{AOBench}: a role-aware, {RBAC}-enforced benchmark for {LLM} agents in {HPC} operations},
+  howpublished = {Software, version v0.4.1, Zenodo},
+  year         = {2026},
+  month        = aug,
+  doi          = {10.5281/zenodo.21854863},
+  url          = {https://github.com/MSKazemi/aobench},
+  note         = {Concept DOI 10.5281/zenodo.21854862. Not a peer-reviewed publication;
+                  cite the version used, as the task corpus changes between minor releases.
+                  Distinct from the ambient-occlusion raytracing microbenchmark of the same name
+                  and from the AObench suite of arXiv:2606.02609}
+}
+
+@inproceedings{ma2025langchainparsl,
+  author    = {Ma, Heng and Brace, Alexander and Siebenschuh, Carlo and Foster, Ian and
+               Ramanathan, Arvind},
+  title     = {{LangChain-Parsl}: Connect Large Language Model Agents to High Performance
+               Computing Resource},
+  booktitle = {Proceedings of the SC '25 Workshops of the International Conference on High
+               Performance Computing, Network, Storage, and Analysis},
+  pages     = {78--85},
+  year      = {2025},
+  doi       = {10.1145/3731599.3767349},
+  note      = {Peer-reviewed version of arXiv:2502.12280; title and author list both differ
+               from the preprint}
+}
+
+@misc{diamondagent2026,
+  author = {Xie, Haotian and Chen, Junlin and Zheng, Mingkai and Zhu, Yifan and Mathew, Minu and
+            Burnette, Max and Babuji, Yadu and Kindratenko, Volodymyr and Venkataraman, Shivaram
+            and Chard, Kyle and Foster, Ian and Zhang, Zhao},
+  title  = {Diamond Agent: Agentic Control of Federated {HPC} Resources as a Service},
+  year   = {2026},
+  eprint = {2609.06181},
+  archivePrefix = {arXiv},
+  url    = {https://arxiv.org/abs/2609.06181},
+  note   = {Preprint; no venue}
+}
+
+@misc{sun2026ecas,
+  author = {Sun, Baixi and Xia, Mingze and Zheng, Huihuo},
+  title  = {{ECAS}: An Edge-Controlled Agentic System for Validation-Gated Scientific Application
+            Execution},
+  year   = {2026},
+  eprint = {2609.14211},
+  archivePrefix = {arXiv},
+  url    = {https://arxiv.org/abs/2609.14211},
+  note   = {Preprint; no venue}
+}
+
+@inproceedings{souza2025provenance,
+  author    = {Souza, Renan and Poteet, Timothy and Etz, Brian and Rosendo, Daniel and
+               Gueroudji, Amal and Shin, Woong and Balaprakash, Prasanna and
+               Ferreira da Silva, Rafael},
+  title     = {{LLM} Agents for Interactive Workflow Provenance: Reference Architecture and
+               Evaluation Methodology},
+  booktitle = {Proceedings of the SC '25 Workshops (WORKS)},
+  year      = {2025},
+  doi       = {10.1145/3731599.3767582},
+  note      = {Replaces the previous mis-attribution to Rosendo et al.; Rosendo is a middle author}
+}
+
+@misc{roadmap2026,
+  author = {Ferreira da Silva, Rafael and Abolhasani, Milad and Beaucage, Guillaume and
+            Biven, Lucy and Bussmann, Michael and Chard, Kyle and Coffee, Ryan and
+            DeWitt, Jackson and Dolas, Rohit and Eckert, Christine and Elbert, Gregory and
+            Foster, Ian and Ghosal, Sayan and Giannakou, Anna and Gibbs, Adam and
+            Hamilton, Michael and Lockwood, Glenn and Mayer, Sarah and Mintz, Ben and
+            Nazikian, Raffi and Nimer, Sarah and Randles, Amanda and Shin, Woong and
+            Sukumar, Sreenivas and Suter, Bruce and Taheri, Saeed and Taufer, Michela and
+            Vrabie, Draguna},
+  title  = {Toward Trustworthy Autonomous Science: A Two-Year Community Roadmap},
+  year   = {2026},
+  eprint = {2607.12113},
+  archivePrefix = {arXiv},
+  url    = {https://arxiv.org/abs/2607.12113},
+  note   = {Preprint; no venue. VERIFY the full author list against the paper before submission}
+}
+
+@misc{sochat2026descriptive,
+  author = {Sochat, Vanessa and Milroy, Daniel},
+  title  = {Descriptive Execution of {HPC} Applications and Workflows},
+  year   = {2026},
+  eprint = {2607.10081},
+  archivePrefix = {arXiv},
+  url    = {https://arxiv.org/abs/2607.10081},
+  note   = {Preprint; no venue}
+}
+
+% ---------------------------------------------------------------- LLMs for HPC code
+@inproceedings{nichols2024pareval,
+  author    = {Nichols, Daniel and Davis, Joshua H. and Xie, Zhaojun and Rajaram, Arjun and
+               Bhatele, Abhinav},
+  title     = {Can Large Language Models Write Parallel Code?},
+  booktitle = {Proceedings of the 33rd International Symposium on High-Performance Parallel and
+               Distributed Computing (HPDC '24)},
+  pages     = {281--294},
+  year      = {2024},
+  doi       = {10.1145/3625549.3658689}
+}
+
+@inproceedings{nichols2024hpccoder,
+  author    = {Nichols, Daniel and Marathe, Aniruddha and Menon, Harshitha and Gamblin, Todd and
+               Bhatele, Abhinav},
+  title     = {{HPC-Coder}: Modeling Parallel Programs using Large Language Models},
+  booktitle = {ISC High Performance 2024},
+  pages     = {1--12},
+  year      = {2024},
+  doi       = {10.23919/ISC.2024.10528929}
+}
+
+@inproceedings{chaturvedi2025hpccoderv2,
+  author    = {Chaturvedi, Aman and Nichols, Daniel and Singh, Siddharth and Bhatele, Abhinav},
+  title     = {{HPC-Coder-V2}: Studying Code {LLMs} Across Low-Resource Parallel Languages},
+  booktitle = {ISC High Performance 2025 Research Paper Proceedings},
+  pages     = {1--14},
+  year      = {2025},
+  doi       = {10.23919/ISC.2025.11017585}
+}
+
+% ---------------------------------------------------------------- agent benchmarks
+@inproceedings{liu2023agentbench,
+  author    = {Liu, Xiao and Yu, Hao and Zhang, Hanchen and Xu, Yifan and Lei, Xuanyu and
+               Lai, Hanyu and Gu, Yu and Ding, Hangliang and Men, Kaiwen and Yang, Kejuan and
+               Zhang, Shudan and Deng, Xiang and Zeng, Aohan and Du, Zhengxiao and
+               Zhang, Chenhui and Shen, Sheng and Zhang, Tianjun and Su, Yu and Sun, Huan and
+               Huang, Minlie and Dong, Yuxiao and Tang, Jie},
+  title     = {{AgentBench}: Evaluating {LLMs} as Agents},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2024},
+  url       = {https://arxiv.org/abs/2308.03688}
+}
+
+@inproceedings{zhou2024webarena,
+  author    = {Zhou, Shuyan and Xu, Frank F. and Zhu, Hao and Zhou, Xuhui and Lo, Robert and
+               Sridhar, Abishek and Cheng, Xianyi and Ou, Tianyue and Bisk, Yonatan and
+               Fried, Daniel and Alon, Uri and Neubig, Graham},
+  title     = {{WebArena}: A Realistic Web Environment for Building Autonomous Agents},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2024},
+  url       = {https://arxiv.org/abs/2307.13854}
+}
+
+@inproceedings{jimenez2024swebench,
+  author    = {Jimenez, Carlos E. and Yang, John and Wettig, Alexander and Yao, Shunyu and
+               Pei, Kexin and Press, Ofir and Narasimhan, Karthik},
+  title     = {{SWE-bench}: Can Language Models Resolve Real-World {GitHub} Issues?},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2024},
+  url       = {https://openreview.net/forum?id=VTF8yNQM66}
+}
+
+@inproceedings{chan2025mlebench,
+  author    = {Chan, Jun Shern and Chowdhury, Neil and Jaffe, Oliver and Aung, James and
+               Sherburn, Dane and Mays, Evan and Starace, Giulio and Liu, Kevin and
+               Maksin, Leon and Patwardhan, Tejal and Weng, Lilian and M{\k{a}}dry, Aleksander},
+  title     = {{MLE-bench}: Evaluating Machine Learning Agents on Machine Learning Engineering},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2025},
+  url       = {https://arxiv.org/abs/2410.07095}
+}
+
+@inproceedings{bogin2024super,
+  author    = {Bogin, Ben and Yang, Kejuan and Gupta, Shashank and Richardson, Kyle and
+               Bransom, Erin and Clark, Peter and Sabharwal, Ashish and Khot, Tushar},
+  title     = {{SUPER}: Evaluating Agents on Setting Up and Executing Tasks from Research
+               Repositories},
+  booktitle = {Proceedings of the 2024 Conference on Empirical Methods in Natural Language
+               Processing (EMNLP)},
+  pages     = {12622--12645},
+  year      = {2024},
+  doi       = {10.18653/v1/2024.emnlp-main.702},
+  note      = {Outstanding Paper}
+}
+
+@inproceedings{ma2024agentboard,
+  author    = {Ma, Chang and Zhang, Junlei and Zhu, Zhihao and Yang, Cheng and Yang, Yujiu and
+               Jin, Yaohui and Lan, Zhenzhong and Kong, Lingpeng and He, Junxian},
+  title     = {{AgentBoard}: An Analytical Evaluation Board of Multi-turn {LLM} Agents},
+  booktitle = {Advances in Neural Information Processing Systems 37 (NeurIPS)},
+  year      = {2024},
+  doi       = {10.52202/079017-2365},
+  note      = {Oral. Earliest fine-grained progress scoring against subgoal decomposition}
+}
+
+@inproceedings{kuang2026enconda,
+  author    = {Kuang, Jiayi and Li, Yinghui and Zhang, Xin and Li, Yangning and Yin, Di and
+               Sun, Xing and Shen, Ying and Yu, Philip S.},
+  title     = {Process-Level Trajectory Evaluation for Environment Configuration in Software
+               Engineering Agents},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2026},
+  url       = {https://arxiv.org/abs/2510.25694},
+  note      = {Enconda-bench. Closest structural relative: four named capability stages of one
+               workflow, scored separately. Proceedings pages not yet available}
+}
+
+@inproceedings{xu2025agentcompany,
+  author    = {Xu, Frank F. and Song, Yufan and Li, Boxuan and Tang, Yuxuan and Jain, Kritanjali
+               and Bao, Mengxue and Wang, Zora Z. and Zhou, Xuhui and Guo, Zhitong and Cao, Murong
+               and Yang, Mingyang and Lu, Hao Yang and Martin, Amaad and Su, Zhe and
+               Maben, Leander and Mehta, Raj and Chi, Wayne and Jang, Lawrence and Xie, Yiqing and
+               Zhou, Shuyan and Neubig, Graham},
+  title     = {{TheAgentCompany}: Benchmarking {LLM} Agents on Consequential Real World Tasks},
+  booktitle = {Advances in Neural Information Processing Systems 38 (NeurIPS), Datasets and
+               Benchmarks Track},
+  pages     = {10291--10321},
+  year      = {2025},
+  doi       = {10.52202/085713-0315}
+}
+
+@article{siegel2024corebench,
+  author  = {Siegel, Zachary S. and Kapoor, Sayash and Nadgir, Nitya and Stroebl, Benedikt and
+             Narayanan, Arvind},
+  title   = {{CORE-Bench}: Fostering the Credibility of Published Research Through a Computational
+             Reproducibility Agent Benchmark},
+  journal = {Transactions on Machine Learning Research (TMLR)},
+  year    = {2025},
+  url     = {https://arxiv.org/abs/2409.11363},
+  note    = {VERIFY volume and pages on the TMLR site. Distinct from two other papers named
+             CORE-Bench (arXiv:2606.11864 and arXiv:2606.26158)}
+}
+
+@inproceedings{kon2024iaceval,
+  author    = {Kon, Patrick Tser Jern and Liu, Jiachen and Qiu, Yiming and Fan, Weijun and
+               He, Ting and Lin, Lei and Zhang, Haoran and Park, Owen M. and
+               Elengikal, George S. and Kang, Yuxin and Chen, Ang and Chowdhury, Mosharaf and
+               Lee, Myungjin and Wang, Xinyu},
+  title     = {{IaC-Eval}: A Code Generation Benchmark for Cloud Infrastructure-as-Code Programs},
+  booktitle = {Advances in Neural Information Processing Systems 37 (NeurIPS), Datasets and
+               Benchmarks Track},
+  year      = {2024},
+  doi       = {10.52202/079017-4273},
+  url       = {https://openreview.net/forum?id=7TCK0aBL1C}
+}
+
+@inproceedings{huang2024mlagentbench,
+  author    = {Huang, Qian and Vora, Jian and Liang, Percy and Leskovec, Jure},
+  title     = {{MLAgentBench}: Evaluating Language Agents on Machine Learning Experimentation},
+  booktitle = {Proceedings of the 41st International Conference on Machine Learning (ICML)},
+  series    = {PMLR},
+  volume    = {235},
+  pages     = {20271--20309},
+  year      = {2024},
+  url       = {https://proceedings.mlr.press/v235/huang24y.html}
+}
+
+@inproceedings{chen2025scienceagentbench,
+  author    = {Chen, Ziru and Chen, Shijie and Ning, Yuting and Zhang, Qianheng and Wang, Boshi and
+               Yu, Botao and Li, Yifei and Liao, Zeyi and Wei, Chen and Lu, Zitong and Dey, Vishal
+               and Xue, Mingyi and Baker, Frazier N. and Burns, Benjamin and
+               Adu-Ampratwum, Daniel and Huang, Xuhui and Ning, Xia and Gao, Song and Su, Yu and
+               Sun, Huan},
+  title     = {{ScienceAgentBench}: Toward Rigorous Assessment of Language Agents for Data-Driven
+               Scientific Discovery},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2025},
+  url       = {https://arxiv.org/abs/2410.05080}
+}
+
+% ---------------------------------------------------------------- foundational agents
+@inproceedings{yao2023react,
+  author    = {Yao, Shunyu and Zhao, Jeffrey and Yu, Dian and Du, Nan and Shafran, Izhak and
+               Narasimhan, Karthik and Cao, Yuan},
+  title     = {{ReAct}: Synergizing Reasoning and Acting in Language Models},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2023},
+  url       = {https://arxiv.org/abs/2210.03629}
+}
+
+@misc{wu2024autogen,
+  author = {Wu, Qingyun and Bansal, Gagan and Zhang, Jieyu and Wu, Yiran and Li, Beibin and
+            Zhu, Erkang and Jiang, Li and Zhang, Xiaoyun and Zhang, Shaokun and Liu, Jiale and
+            Awadallah, Ahmed Hassan and White, Ryen W. and Burger, Doug and Wang, Chi},
+  title  = {{AutoGen}: Enabling Next-Gen {LLM} Applications via Multi-Agent Conversation},
+  year   = {2023},
+  eprint = {2308.08155},
+  archivePrefix = {arXiv},
+  url    = {https://arxiv.org/abs/2308.08155},
+  note   = {VERIFY: widely cited as COLM 2024; the arXiv record carries no journal reference}
+}
+
+@misc{wang2023voyager,
+  author = {Wang, Guanzhi and Xie, Yuqi and Jiang, Yunfan and Mandlekar, Ajay and Xiao, Chaowei and
+            Zhu, Yuke and Fan, Linxi and Anandkumar, Anima},
+  title  = {Voyager: An Open-Ended Embodied Agent with Large Language Models},
+  year   = {2023},
+  eprint = {2305.16291},
+  archivePrefix = {arXiv},
+  url    = {https://arxiv.org/abs/2305.16291},
+  note   = {VERIFY: widely cited as TMLR 2024; the arXiv record carries no journal reference}
+}
+
+% ---------------------------------------------------------------- LLM-as-judge and rubrics
+@inproceedings{zheng2023mtbench,
+  author    = {Zheng, Lianmin and Chiang, Wei-Lin and Sheng, Ying and Zhuang, Siyuan and
+               Wu, Zhanghao and Zhuang, Yonghao and Lin, Zi and Li, Zhuohan and Li, Dacheng and
+               Xing, Eric P. and Zhang, Hao and Gonzalez, Joseph E. and Stoica, Ion},
+  title     = {Judging {LLM-as-a-Judge} with {MT-Bench} and {Chatbot Arena}},
+  booktitle = {Advances in Neural Information Processing Systems 36 (NeurIPS), Datasets and
+               Benchmarks Track},
+  year      = {2023},
+  doi       = {10.48550/arXiv.2306.05685}
+}
+
+@inproceedings{liu2023geval,
+  author    = {Liu, Yang and Iter, Dan and Xu, Yichong and Wang, Shuohang and Xu, Ruochen and
+               Zhu, Chenguang},
+  title     = {{G-Eval}: {NLG} Evaluation using {GPT-4} with Better Human Alignment},
+  booktitle = {Proceedings of the 2023 Conference on Empirical Methods in Natural Language
+               Processing (EMNLP)},
+  pages     = {2511--2522},
+  year      = {2023},
+  doi       = {10.18653/v1/2023.emnlp-main.153},
+  note      = {VERIFY venue: the arXiv record carries no journal reference}
+}
+
+@inproceedings{kim2024prometheus2,
+  author    = {Kim, Seungone and Suk, Juyoung and Longpre, Shayne and Lin, Bill Yuchen and
+               Shin, Jamin and Welleck, Sean and Neubig, Graham and Lee, Moontae and Lee, Kyungjae
+               and Seo, Minjoon},
+  title     = {Prometheus 2: An Open Source Language Model Specialized in Evaluating Other
+               Language Models},
+  booktitle = {Proceedings of the 2024 Conference on Empirical Methods in Natural Language
+               Processing (EMNLP)},
+  year      = {2024},
+  doi       = {10.48550/arXiv.2405.01535}
+}
+
+@misc{qin2024infobench,
+  author = {Qin, Yiwei and Song, Kaiqiang and Hu, Yebowen and Yao, Wenlin and Cho, Sangwoo and
+            Wang, Xiaoyang and Wu, Xuansheng and Liu, Fei and Liu, Pengfei and Yu, Dong},
+  title  = {{InFoBench}: Evaluating Instruction Following Ability in Large Language Models},
+  year   = {2024},
+  eprint = {2401.03601},
+  archivePrefix = {arXiv},
+  url    = {https://arxiv.org/abs/2401.03601},
+  note   = {DRFR: the direct ancestor of verdict-per-requirement with code-side aggregation.
+            VERIFY venue: widely cited as NAACL 2024 Findings}
+}
+
+@misc{arora2025healthbench,
+  author = {Arora, Rahul K. and Wei, Jason and Soskin Hicks, Rebecca and Bowman, Preston and
+            Qui{\~n}onero-Candela, Joaquin and Tsimpourlas, Foivos and Sharman, Michael and
+            Shah, Meghan and Vallone, Andrea and Beutel, Alex and Heidecke, Johannes and
+            Singhal, Karan},
+  title  = {{HealthBench}: Evaluating Large Language Models Towards Improved Human Health},
+  year   = {2025},
+  eprint = {2505.08775},
+  archivePrefix = {arXiv},
+  url    = {https://arxiv.org/abs/2505.08775},
+  note   = {Preprint; no venue}
+}
+
+@misc{starace2025paperbench,
+  author = {Starace, Giulio and Jaffe, Oliver and Sherburn, Dane and Aung, James and
+            Chan, Jun Shern and Maksin, Leon and Dias, Rachel and Mays, Evan and
+            Kinsella, Benjamin and Thompson, Wyatt and Heidecke, Johannes and Glaese, Amelia and
+            Patwardhan, Tejal},
+  title  = {{PaperBench}: Evaluating {AI}'s Ability to Replicate {AI} Research},
+  year   = {2025},
+  eprint = {2504.01848},
+  archivePrefix = {arXiv},
+  url    = {https://arxiv.org/abs/2504.01848},
+  note   = {Preprint; no venue. JudgeEval is the judge-validation template this paper follows}
+}
+
+@inproceedings{shankar2024validators,
+  author    = {Shankar, Shreya and Zamfirescu-Pereira, J. D. and Hartmann, Bj{\"o}rn and
+               Parameswaran, Aditya G. and Arawjo, Ian},
+  title     = {Who Validates the Validators? Aligning {LLM}-Assisted Evaluation of {LLM} Outputs
+               with Human Preferences},
+  booktitle = {Proceedings of the 37th Annual ACM Symposium on User Interface Software and
+               Technology (UIST)},
+  year      = {2024},
+  doi       = {10.1145/3654777.3676450},
+  note      = {Criteria drift. VERIFY venue and DOI: ACM DL was unreachable during verification}
+}
+
+@misc{dixit2026rift,
+  author = {Dixit, Prithvi and Hosseini, Pedram},
+  title  = {Are We Grading Properly? Understanding Failure Modes in Medical Benchmarks},
+  year   = {2026},
+  eprint = {2609.16023},
+  archivePrefix = {arXiv},
+  url    = {https://arxiv.org/abs/2609.16023},
+  note   = {RIFT. Prior art for measuring the score impact of rubric defects: up to 15.9 points}
+}
+
+@misc{wang2023unfair,
+  author = {Wang, Peiyi and Li, Lei and Chen, Liang and Cai, Zefan and Zhu, Dawei and
+            Lin, Binghuai and Cao, Yunbo and Liu, Qi and Liu, Tianyu and Sui, Zhifang},
+  title  = {Large Language Models are not Fair Evaluators},
+  year   = {2023},
+  eprint = {2305.17926},
+  archivePrefix = {arXiv},
+  url    = {https://arxiv.org/abs/2305.17926}
+}
+
+@misc{panickssery2024selfpreference,
+  author = {Panickssery, Arjun and Bowman, Samuel R. and Feng, Shi},
+  title  = {{LLM} Evaluators Recognize and Favor Their Own Generations},
+  year   = {2024},
+  eprint = {2404.13076},
+  archivePrefix = {arXiv},
+  url    = {https://arxiv.org/abs/2404.13076}
+}
+
+@misc{norman2026reliability,
+  author = {Norman, Justin D. and Rivera, Michael U. and Hughes, D. Alex},
+  title  = {Reliability without Validity: A Systematic, Large-Scale Evaluation of
+            {LLM-as-a-Judge} Models Across Agreement, Consistency, and Bias},
+  year   = {2026},
+  eprint = {2606.19544},
+  archivePrefix = {arXiv},
+  url    = {https://arxiv.org/abs/2606.19544},
+  note   = {Kappa deflation of 33-41 points relative to exact-match agreement on MT-Bench}
+}
+
+@article{artstein2008agreement,
+  author  = {Artstein, Ron and Poesio, Massimo},
+  title   = {Survey Article: Inter-Coder Agreement for Computational Linguistics},
+  journal = {Computational Linguistics},
+  volume  = {34},
+  number  = {4},
+  pages   = {555--596},
+  year    = {2008},
+  doi     = {10.1162/coli.07-034-R2}
+}
+
+@misc{verga2024poll,
+  author = {Verga, Pat and Hofstatter, Sebastian and Althammer, Sophia and Su, Yixuan and
+            Piktus, Aleksandra and Arkhangorodsky, Arkady and Xu, Minjie and White, Naomi and
+            Lewis, Patrick},
+  title  = {Replacing Judges with Juries: Evaluating {LLM} Generations with a Panel of Diverse
+            Models},
+  year   = {2024},
+  eprint = {2404.18796},
+  archivePrefix = {arXiv},
+  url    = {https://arxiv.org/abs/2404.18796},
+  note   = {A panel of three DISTINCT model families, not three samples of one judge.
+            VERIFY venue: widely cited as COLM 2024}
+}
+
+% ---------------------------------------------------------------- HPC user support, RAG
+% Verified against the publisher PDF (ACM DL, 10.1145/3731599.3767433): full author list,
+% venue string, and DOI all taken from the paper's own "ACM Reference Format" block.
+@inproceedings{bondapalli2025askhpc,
+  author    = {Bondapalli, Akhilesh and Zheng, Huihuo and Ajayi, Oluwaseun T. and
+               Keceli, Murat and Siddabathuni Som, Haritha and Childers, Taylor and
+               Childers, Lisa and Ghadar, Yasaman and Papka, Michael and
+               Vishwanath, Venkatram and Ge, Rong},
+  title     = {{AskHPC}: A {ChatBot} for High Performance Computing User Support},
+  booktitle = {Workshops of the International Conference for High Performance Computing,
+               Networking, Storage and Analysis (SC Workshops '25)},
+  year      = {2025},
+  month     = nov,
+  address   = {St.\ Louis, MO, USA},
+  publisher = {ACM},
+  pages     = {727--739},
+  doi       = {10.1145/3731599.3767433},
+  url       = {https://doi.org/10.1145/3731599.3767433}
+}
+
+% VERIFY: page range. Authors, title, venue and arXiv id are certain; NeurIPS 33 page numbers
+% are from recollection and were not confirmed against proceedings.neurips.cc during this sweep.
+@inproceedings{lewis2020rag,
+  author    = {Lewis, Patrick and Perez, Ethan and Piktus, Aleksandra and Petroni, Fabio and
+               Karpukhin, Vladimir and Goyal, Naman and K{\"u}ttler, Heinrich and
+               Lewis, Mike and Yih, Wen-tau and Rockt{\"a}schel, Tim and Riedel, Sebastian and
+               Kiela, Douwe},
+  title     = {Retrieval-Augmented Generation for Knowledge-Intensive {NLP} Tasks},
+  booktitle = {Advances in Neural Information Processing Systems 33 (NeurIPS 2020)},
+  year      = {2020},
+  eprint    = {2005.11401},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.CL},
+  url       = {https://arxiv.org/abs/2005.11401}
+}
