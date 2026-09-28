@@ -1,0 +1,518 @@
+{
+ "what": "Two-judge adjudication of parser-vs-judge disagreements on INP.common.no_invented_keywords, Input preparation, v8 corpus.",
+ "method": "gpt56terra and claudeopus5 each classified the disputed tokens as invented / deprecated / valid; claudeopus5 then arbitrated with both opinions visible. Serial, not concurrent: 4 workers against the Anthropic bridge failed 8 of 14 first-round Claude calls with all retries exhausted.",
+ "caveat": "Claude arbitrates a FACTUAL question about syntax here, which is not the closed loop the judge design avoids. Claude authors the prompts and reference answers, so it must not arbitrate answer QUALITY against those references.",
+ "date": "2026-09-27",
+ "summary": {
+  "cases": 14,
+  "independent_agreement_before_arbitration": 9,
+  "arbiter_who_was_right": {
+   "parser": 0,
+   "judge": 5,
+   "both": 9,
+   "neither": 0
+  },
+  "verdict_class": {
+   "invented": 6,
+   "deprecated": 5,
+   "valid": 0,
+   "mixed": 3
+  }
+ },
+ "cases": [
+  {
+   "arm": "bare",
+   "model": "gpt-oss-120b",
+   "app": "nekrs",
+   "judge": "violated",
+   "parser": "satisfied",
+   "parser_findings": [],
+   "judge_evidence": "The `.par` uses non-NekRS uppercase assignment directives such as `ELEMENT_ORDER`, `TIME_STEP`, `NSTEP`, `STATISTICS_START_STEP`, and `RUN_TYPE` rather than valid NekRS sectioned parameter keys.",
+   "gpt": {
+    "verdict": "invented",
+    "tokens": {
+     "ELEMENT_ORDER": "INVENTED",
+     "TIME_STEP": "INVENTED",
+     "NSTEP": "INVENTED",
+     "STATISTICS_START_STEP": "INVENTED",
+     "RUN_TYPE": "INVENTED"
+    },
+    "why": "NekRS .par files use sectioned parameter names such as polynomialOrder, dt, and numSteps, not these underscore-style uppercase directives."
+   },
+   "claude": {
+    "verdict": "invented",
+    "tokens": {
+     "ELEMENT_ORDER": "invented",
+     "TIME_STEP": "invented",
+     "NSTEP": "invented",
+     "STATISTICS_START_STEP": "invented",
+     "RUN_TYPE": "invented"
+    },
+    "why": "NekRS .par files use INI sections ([GENERAL], [MESH], [VELOCITY], ...) with camelCase keys such as polynomialOrder, dt, numSteps, stopAt/endTime and startFrom; none of the listed underscore-style tokens has ever been accepted by any nekRS release (nor by Nek5000's .par), so they are fabricated rather than deprecated."
+   },
+   "final": {
+    "verdict": "invented",
+    "who_was_right": "both",
+    "why": "NekRS .par files use INI sections with camelCase keys (polynomialOrder, dt, numSteps, startFrom, stopAt), so the uppercase underscore tokens ELEMENT_ORDER, TIME_STEP, NSTEP, STATISTICS_START_STEP, and RUN_TYPE are fabricated rather than deprecated, as both judges concluded."
+   }
+  },
+  {
+   "arm": "bare",
+   "model": "gpt-oss-120b",
+   "app": "gromacs",
+   "judge": "satisfied",
+   "parser": "violated",
+   "parser_findings": [
+    "ns_type",
+    "pmeorder",
+    "title"
+   ],
+   "judge_evidence": "",
+   "gpt": {
+    "verdict": "deprecated",
+    "tokens": {
+     "ns_type": "DEPRECATED",
+     "pmeorder": "INVENTED",
+     "title": "VALID"
+    },
+    "why": "ns_type is an obsolete historical .mdp option, pmeorder is not the real pme_order keyword, and title remains a supported .mdp field."
+   },
+   "claude": {
+    "verdict": "mixed",
+    "tokens": {
+     "ns_type": "deprecated",
+     "pmeorder": "invented",
+     "title": "deprecated"
+    },
+    "why": "ns_type (ns-type) was a real neighbor-searching option removed with the group cutoff-scheme, and title was a legacy mdp field dropped in GROMACS 5.0, while the PME spline order option is spelled pme-order/pme_order, so bare 'pmeorder' never existed."
+   },
+   "final": {
+    "verdict": "mixed",
+    "who_was_right": "judge",
+    "why": "Claude is correct: 'ns_type' and 'title' are both genuine legacy .mdp options that were removed (title in 5.0, ns-type with the group cutoff-scheme) rather than one being currently valid, while 'pmeorder' is a malformed version of pme-order/pme_order and never existed, making the set mixed deprecated+invented."
+   }
+  },
+  {
+   "arm": "bare",
+   "model": "gemma-4-31b",
+   "app": "nekrs",
+   "judge": "violated",
+   "parser": "satisfied",
+   "parser_findings": [],
+   "judge_evidence": "Keywords such as `t_end`, `t_stat`, `re_tau`, `wall_law`, `polynomial_order`, `time_stepping`, `output_interval`, and `statistics_interval` are not NekRS `.par` directives; NekRS uses INI-style sections and keys such as ",
+   "gpt": {
+    "verdict": "invented",
+    "tokens": {
+     "t_end": "INVENTED",
+     "t_stat": "INVENTED",
+     "re_tau": "INVENTED",
+     "wall_law": "INVENTED",
+     "polynomial_order": "INVENTED",
+     "time_stepping": "INVENTED",
+     "output_interval": "INVENTED",
+     "statistics_interval": "INVENTED"
+    },
+    "why": "NekRS uses sectioned .par keys with its documented spellings (for example endTime, polynomialOrder, timeStepper, and outputInterval), not these underscore-style tokens."
+   },
+   "claude": {
+    "verdict": "invented",
+    "tokens": {
+     "t_end": "invented",
+     "t_stat": "invented",
+     "re_tau": "invented",
+     "wall_law": "invented",
+     "polynomial_order": "invented",
+     "time_stepping": "invented",
+     "output_interval": "invented",
+     "statistics_interval": "invented"
+    },
+    "why": "NekRS `.par` files use INI sections with camelCase keys validated against a fixed list (e.g. [GENERAL] polynomialOrder, endTime/numSteps, dt, timeStepper, writeControl/writeInterval, stopAt; [PROBLEMTYPE], [VELOCITY] boundaryTypeMap, etc.), and none of these snake_case tokens has ever been a recognized directive in any NekRS release \u2014 they would only be tolerated as arbitrary user values inside a [CASEDATA] block read explicitly by the UDF, not as language keywords."
+   },
+   "final": {
+    "verdict": "invented",
+    "who_was_right": "both",
+    "why": "NekRS `.par` files use INI sections with camelCase keys (endTime, polynomialOrder, timeStepper, writeInterval, etc.), so none of these snake_case tokens are recognized directives \u2014 only arbitrary user-defined values in [CASEDATA] read by the UDF."
+   }
+  },
+  {
+   "arm": "bare",
+   "model": "gemma-4-31b",
+   "app": "qe",
+   "judge": "violated",
+   "parser": "satisfied",
+   "parser_findings": [],
+   "judge_evidence": "The card is written as `K_POINTS (mp)`, but QE pw.x uses `K_POINTS automatic` for a Monkhorst-Pack mesh; `mp` is not a valid K_POINTS card option.",
+   "gpt": {
+    "verdict": "invented",
+    "tokens": {
+     "K_POINTS": "valid",
+     "mp": "invented"
+    },
+    "why": "K_POINTS is a valid QE card, but mp has never been an accepted K_POINTS option; Monkhorst-Pack meshes use automatic."
+   },
+   "claude": {
+    "verdict": "mixed",
+    "tokens": {
+     "K_POINTS": "valid",
+     "mp": "invented",
+     "automatic": "valid"
+    },
+    "why": "K_POINTS is a current pw.x card and `automatic` is its valid Monkhorst-Pack option (alongside tpiba, crystal, gamma, tpiba_b/crystal_b, tpiba_c/crystal_c), but `mp` has never been accepted as a K_POINTS option in any Quantum ESPRESSO release."
+   },
+   "final": {
+    "verdict": "mixed",
+    "who_was_right": "both",
+    "why": "Both correctly identified K_POINTS as a valid pw.x card and `mp` as a never-supported option (Monkhorst-Pack grids use `automatic`), so the aggregate label is `mixed` rather than wholly `invented`."
+   }
+  },
+  {
+   "arm": "bare",
+   "model": "llama-3.1-8b",
+   "app": "nekrs",
+   "judge": "violated",
+   "parser": "satisfied",
+   "parser_findings": [],
+   "judge_evidence": "The purported NekRS input uses unsupported pseudo-keywords including `PROBLEM`, `REYNOLDS_NUMBER`, `NUM_MESH_ELEMENTS`, `NUM_TIMESTEPS`, and `SYSTEM`, rather than NekRS `.par` syntax and sections.",
+   "gpt": {
+    "verdict": "invented",
+    "tokens": {
+     "PROBLEM": "INVENTED",
+     "REYNOLDS_NUMBER": "INVENTED",
+     "NUM_MESH_ELEMENTS": "INVENTED",
+     "NUM_TIMESTEPS": "INVENTED",
+     "SYSTEM": "INVENTED"
+    },
+    "why": "NekRS uses .par sections such as [GENERAL], [PROBLEM TYPE], and [MESH] with keys like numSteps, not these underscore-style tokens or [PROBLEM]/[SYSTEM] sections."
+   },
+   "claude": {
+    "verdict": "invented",
+    "tokens": {
+     "PROBLEM": "invented",
+     "REYNOLDS_NUMBER": "invented",
+     "NUM_MESH_ELEMENTS": "invented",
+     "NUM_TIMESTEPS": "invented",
+     "SYSTEM": "invented"
+    },
+    "why": "NekRS .par files are case-insensitive INI decks with sections like [GENERAL], [PROBLEMTYPE], [MESH], [VELOCITY], [PRESSURE], [TEMPERATURE], [SCALARnn], [CASEDATA], [OCCA] and keys such as numSteps, dt, endTime, polynomialOrder, viscosity (negative value denoting Reynolds number), so none of PROBLEM, REYNOLDS_NUMBER, NUM_MESH_ELEMENTS, NUM_TIMESTEPS, or SYSTEM has ever been a recognized section or key in any nekRS release."
+   },
+   "final": {
+    "verdict": "invented",
+    "who_was_right": "both",
+    "why": "Both judges correctly identify that nekRS .par files use sections like [GENERAL], [PROBLEMTYPE], [MESH], [VELOCITY], [PRESSURE] with keys such as numSteps, dt, polynomialOrder and viscosity (negative for Reynolds number), so [PROBLEM], [SYSTEM], REYNOLDS_NUMBER, NUM_MESH_ELEMENTS and NUM_TIMESTEPS are fabricated rather than deprecated."
+   }
+  },
+  {
+   "arm": "bare",
+   "model": "nemotron-3-ultra",
+   "app": "nekrs",
+   "judge": "violated",
+   "parser": "satisfied",
+   "parser_findings": [],
+   "judge_evidence": "The `.par` uses non-NekRS parameter-file directives including `param(1)`, `lx1`, `ly1`, `lz1`, `lelg`, `nelgv`, `nsteps`, `targetcfl`, `timeint`, `extrap`, `ioh`, `ios`, `iost`, `chkpt`, and inline boundary records; thes",
+   "gpt": {
+    "verdict": "valid",
+    "tokens": {
+     "param(1)": "invented",
+     "lx1": "invented",
+     "ly1": "invented",
+     "lz1": "invented",
+     "lelg": "invented",
+     "nelgv": "invented",
+     "nsteps": "invented",
+     "targetcfl": "valid",
+     "timeint": "invented",
+     "extrap": "invented",
+     "ioh": "invented",
+     "ios": "invented",
+     "iost": "invented",
+     "chkpt": "valid",
+     "inline boundary records": "invented"
+    },
+    "why": "Current NekRS accepts the case-insensitive `targetCFL` parameter and `CHKPOINT` section, while the other listed items are Nek5000/SIZE/.rea-style constructs rather than NekRS `.par` keywords or sections."
+   },
+   "claude": {
+    "verdict": "invented",
+    "tokens": {
+     "param(1)": "invented",
+     "lx1": "invented",
+     "ly1": "invented",
+     "lz1": "invented",
+     "lelg": "invented",
+     "nelgv": "invented",
+     "nsteps": "invented",
+     "targetcfl": "valid",
+     "timeint": "invented",
+     "extrap": "invented",
+     "ioh": "invented",
+     "ios": "invented",
+     "iost": "invented",
+     "chkpt": "invented",
+     "inline boundary records": "invented"
+    },
+    "why": "NekRS's .par file only accepts INI-style sections ([GENERAL], [MESH], [VELOCITY], [PRESSURE], [TEMPERATURE], [SCALARnn], [OCCA], [CASEDATA], ...) with keys such as polynomialOrder, numSteps, dt, timeStepper, writeControl/writeInterval and targetCFL (the only listed token that is real and current); param(n), lx1/ly1/lz1/lelg/nelgv (Nek5000 SIZE/.rea Fortran parameters), nsteps, timeint, extrap, ioh, ios, iost, chkpt and inline boundary-condition records were never .par directives in any NekRS release, so they are invented rather than deprecated."
+   },
+   "final": {
+    "verdict": "invented",
+    "who_was_right": "judge",
+    "why": "Apart from targetCFL, every listed token is a Nek5000 SIZE/.rea/KTH-toolbox construct (including the [CHKPOINT] section, which belongs to Nek5000's par format, not nekRS's), so Claude's assessment that the output is fabricated nekRS syntax is correct."
+   }
+  },
+  {
+   "arm": "bare",
+   "model": "nemotron-3-ultra",
+   "app": "gromacs",
+   "judge": "satisfied",
+   "parser": "violated",
+   "parser_findings": [
+    "ns_type",
+    "nstxtcout"
+   ],
+   "judge_evidence": "",
+   "gpt": {
+    "verdict": "deprecated",
+    "tokens": {
+     "ns_type": "deprecated",
+     "nstxtcout": "deprecated"
+    },
+    "why": "Both are historical GROMACS MDP keywords that were later removed, ignored, or replaced by newer options such as cutoff-scheme and nstxout-compressed."
+   },
+   "claude": {
+    "verdict": "deprecated",
+    "tokens": {
+     "ns_type": "deprecated",
+     "nstxtcout": "deprecated"
+    },
+    "why": "ns_type (grid/simple neighbor-search selection) was a real mdp option tied to the group cutoff-scheme and disappeared when that scheme was removed, while nstxtcout was the old XTC output-frequency knob renamed to nstxout-compressed in GROMACS 5.0."
+   },
+   "final": {
+    "verdict": "deprecated",
+    "who_was_right": "both",
+    "why": "Both ns_type (grid/simple neighbor-search selection, obsoleted with the removal of the group cutoff-scheme) and nstxtcout (renamed nstxout-compressed in GROMACS 5.0) were genuine mdp keywords that are no longer supported, so both judges' concurring 'deprecated' verdict is correct."
+   }
+  },
+  {
+   "arm": "base",
+   "model": "gpt-oss-120b",
+   "app": "nekrs",
+   "judge": "violated",
+   "parser": "satisfied",
+   "parser_findings": [],
+   "judge_evidence": "The UDF claims that `nek::ptr<double>(\"p_grad\")` is a built-in NekRS pressure-gradient variable; this is not an established NekRS UDF forcing interface, and the provided empty `userf()` consequently does not apply the cl",
+   "gpt": {
+    "verdict": "invented",
+    "tokens": {
+     "p_grad": "INVENTED",
+     "userf": "INVENTED"
+    },
+    "why": "Neither `p_grad` nor `userf` is a NekRS input-file keyword or section name in the current input grammar."
+   },
+   "claude": {
+    "verdict": "invented",
+    "tokens": {
+     "nek::ptr<double>": "valid",
+     "\"p_grad\"": "invented",
+     "userf": "valid"
+    },
+    "why": "`nek::ptr<T>(\"name\")` and the `userf` UDF callback are genuine NekRS interfaces, but no release ever exposed a Nek5000 common-block array named \"p_grad\" (valid names are e.g. \"vx\",\"pr\",\"t\",\"xm1\"), so that identifier is fabricated."
+   },
+   "final": {
+    "verdict": "invented",
+    "who_was_right": "judge",
+    "why": "Both agreed the snippet is invented, but Claude's token-level breakdown is correct: `nek::ptr<T>()` and the `userf` UDF forcing callback are genuine NekRS interfaces, while the Nek5000 common-block name \"p_grad\" is fabricated (real names are vx, vy, pr, t, xm1, etc.)."
+   }
+  },
+  {
+   "arm": "base",
+   "model": "gpt-oss-120b",
+   "app": "gromacs",
+   "judge": "satisfied",
+   "parser": "violated",
+   "parser_findings": [
+    "ns_type"
+   ],
+   "judge_evidence": "",
+   "gpt": {
+    "verdict": "deprecated",
+    "tokens": {
+     "ns_type": "DEPRECATED"
+    },
+    "why": "ns_type was a real older .mdp keyword for selecting the neighbor-search method, but it has been removed from current GROMACS."
+   },
+   "claude": {
+    "verdict": "deprecated",
+    "tokens": {
+     "ns_type": "deprecated"
+    },
+    "why": "ns-type (grid/simple) was a real neighbor-searching mdp option tied to the old group cutoff-scheme and was removed once that scheme was dropped (GROMACS 2020), so it is no longer accepted by current versions."
+   },
+   "final": {
+    "verdict": "deprecated",
+    "who_was_right": "both",
+    "why": "ns_type (ns-type = grid/simple) was a genuine GROMACS .mdp neighbor-searching option tied to the group cutoff-scheme, which was removed when that scheme was dropped in GROMACS 2020, so it is real but no longer accepted."
+   }
+  },
+  {
+   "arm": "base",
+   "model": "nemotron-3-ultra",
+   "app": "gromacs",
+   "judge": "satisfied",
+   "parser": "violated",
+   "parser_findings": [
+    "ns_type",
+    "nstxtcout"
+   ],
+   "judge_evidence": "",
+   "gpt": {
+    "verdict": "deprecated",
+    "tokens": {
+     "ns_type": "DEPRECATED",
+     "nstxtcout": "DEPRECATED"
+    },
+    "why": "Both were real older .mdp keywords, but ns_type was removed with obsolete neighbor-search settings and nstxtcout was renamed to nstxout-compressed."
+   },
+   "claude": {
+    "verdict": "deprecated",
+    "tokens": {
+     "ns_type": "deprecated",
+     "nstxtcout": "deprecated"
+    },
+    "why": "Both were genuine mdp options in older GROMACS: ns_type (grid/simple neighbor searching) disappeared with the removal of the group cutoff-scheme, and nstxtcout was renamed nstxout-compressed in GROMACS 5.0."
+   },
+   "final": {
+    "verdict": "deprecated",
+    "who_was_right": "both",
+    "tokens": {
+     "ns_type": "deprecated",
+     "nstxtcout": "deprecated"
+    },
+    "why": "Both judges correctly identified these as real legacy .mdp keywords: ns_type (grid/simple neighbor searching) vanished with the group cutoff-scheme's removal, and nstxtcout was renamed nstxout-compressed in GROMACS 5.0, so neither token is invented but neither is currently valid."
+   }
+  },
+  {
+   "arm": "rich",
+   "model": "gpt-oss-120b",
+   "app": "nekrs",
+   "judge": "violated",
+   "parser": "satisfied",
+   "parser_findings": [],
+   "judge_evidence": "The UDF claims `*nek::ptr<double>(\"dpdx\")` is an internal NekRS scalar used as a momentum body force, but `dpdx` is not a general NekRS registered scalar/body-force input; the provided `userf()` is empty, so this does no",
+   "gpt": {
+    "verdict": "valid",
+    "tokens": {
+     "dpdx": "VALID"
+    },
+    "why": "`dpdx` is a valid current NekRS UDF pointer name, although it is not a `.par`-file section or general parameter keyword."
+   },
+   "claude": {
+    "verdict": "invented",
+    "tokens": {
+     "nek::ptr": "valid",
+     "\"dpdx\"": "invented",
+     "userf": "valid"
+    },
+    "why": "`nek::ptr(...)` and the `userf()` UDF hook are genuine nekRS C++/UDF API elements (not .par keywords), but `\"dpdx\"` is not one of the recognized Nek5000 common-block identifiers exposed through `nek::ptr`, nor a registered body-force scalar in any nekRS release, so that identifier is fabricated."
+   },
+   "final": {
+    "verdict": "invented",
+    "who_was_right": "judge",
+    "why": "`nek::ptr` and the `userf()` hook are genuine nekRS API elements, but `\"dpdx\"` is not among the Nek5000 common-block identifiers exposed by `nek::ptr` (which covers things like vx/vy/vz, pr, t, xm1, p0th, dp0thdt), so the pressure-gradient token is fabricated."
+   }
+  },
+  {
+   "arm": "rich",
+   "model": "gpt-oss-120b",
+   "app": "gromacs",
+   "judge": "satisfied",
+   "parser": "violated",
+   "parser_findings": [
+    "ns_type"
+   ],
+   "judge_evidence": "",
+   "gpt": {
+    "verdict": "deprecated",
+    "tokens": {
+     "ns_type": "deprecated"
+    },
+    "why": "`ns_type` was a real older GROMACS MDP keyword for neighbor-search type selection, but it was removed when grid-based neighbor searching became mandatory."
+   },
+   "claude": {
+    "verdict": "deprecated",
+    "tokens": {
+     "ns_type": "deprecated"
+    },
+    "why": "ns_type (ns-type = simple/grid) was a real neighbor-searching mdp option tied to the group cutoff scheme, which was removed with that scheme in GROMACS 2019 and is absent from current mdp options."
+   },
+   "final": {
+    "verdict": "deprecated",
+    "tokens": {
+     "ns_type": "deprecated"
+    },
+    "who_was_right": "both",
+    "why": "`ns-type` (simple/grid) was a genuine neighbor-searching mdp keyword tied to the group cutoff scheme and was removed once the Verlet scheme became mandatory (GROMACS 2019/2020), so it is deprecated rather than invented."
+   }
+  },
+  {
+   "arm": "rich",
+   "model": "llama-3.1-8b",
+   "app": "gromacs",
+   "judge": "satisfied",
+   "parser": "violated",
+   "parser_findings": [
+    "ns_type",
+    "vdw_type"
+   ],
+   "judge_evidence": "",
+   "gpt": {
+    "verdict": "deprecated",
+    "tokens": {
+     "ns_type": "DEPRECATED",
+     "vdw_type": "INVENTED"
+    },
+    "why": "GROMACS formerly accepted ns_type, but the real van der Waals keyword is vdwtype (without an underscore), not vdw_type."
+   },
+   "claude": {
+    "verdict": "mixed",
+    "tokens": {
+     "ns_type": "deprecated",
+     "vdw_type": "valid"
+    },
+    "why": "ns-type (grid/simple neighbor-search selection) was a real mdp option but was dropped when the group cutoff scheme was removed in GROMACS 2020, whereas vdwtype/vdw-type remains a current nonbonded-interaction option (underscores and dashes are interchangeable in mdp keys)."
+   },
+   "final": {
+    "verdict": "mixed",
+    "who_was_right": "judge",
+    "why": "GROMACS mdp key matching ignores dashes/underscores (gmx_strcasecmp_min), so vdw_type resolves to the current vdwtype option, while ns_type was a genuine option removed with the group cutoff scheme in GROMACS 2020."
+   }
+  },
+  {
+   "arm": "rich",
+   "model": "nemotron-3-ultra",
+   "app": "gromacs",
+   "judge": "satisfied",
+   "parser": "violated",
+   "parser_findings": [
+    "ns_type"
+   ],
+   "judge_evidence": "",
+   "gpt": {
+    "verdict": "deprecated",
+    "tokens": {
+     "ns_type": "DEPRECATED"
+    },
+    "why": "ns_type was a real older .mdp keyword for neighbor-search type selection, but it was removed when modern Verlet neighbor searching replaced it."
+   },
+   "claude": {
+    "verdict": "deprecated",
+    "tokens": {
+     "ns_type": "deprecated"
+    },
+    "why": "ns_type (ns-type: grid/simple) was a real neighbor-search option for the old group cutoff-scheme, and it was removed when that scheme was dropped (GROMACS 2020), so it is no longer accepted in current releases."
+   },
+   "final": {
+    "verdict": "deprecated",
+    "who_was_right": "both",
+    "why": "ns-type (grid/simple) was a genuine .mdp neighbor-search keyword tied to the group cutoff-scheme and was removed when that scheme was dropped in GROMACS 2020, so both judges correctly classified it as deprecated rather than invented."
+   }
+  }
+ ]
+}

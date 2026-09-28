@@ -2,8 +2,11 @@
 # definition -- PW/Doc/INPUT_PW.def, the file QE itself uses to generate its documentation.
 # Not transcribed by hand and not inferred from an exemplar.
 #
-# Namelist variables and card names only. Values, defaults and conditional applicability are
-# NOT captured: this answers 'is this a real keyword', not 'is this value sensible'.
+# `card_options` are the enum values a card accepts as its argument, e.g. K_POINTS automatic.
+# Added after the judge caught `K_POINTS (mp)` -- a real card with a non-existent option --
+# which the first version of this grammar could not see because it checked namelist variables
+# only. Values, defaults and conditional applicability are still NOT captured: this answers
+# 'is this a real keyword', never 'is this value sensible'.
 
 source:
   repo: QEF/q-e
@@ -290,3 +293,36 @@ cards:
 - K_POINTS
 - OCCUPATIONS
 - SOLVENTS
+card_options:
+  ATOMIC_POSITIONS:
+  - alat
+  - angstrom
+  - bohr
+  - crystal
+  - crystal_sg
+  ATOMIC_VELOCITIES:
+  - a.u
+  CELL_PARAMETERS:
+  - alat
+  - angstrom
+  - bohr
+  IS:
+  - crystal
+  - crystal_b
+  - crystal_c
+  - tpiba
+  - tpiba_b
+  - tpiba_c
+  K_POINTS:
+  - automatic
+  - crystal
+  - crystal_b
+  - crystal_c
+  - gamma
+  - tpiba
+  - tpiba_b
+  - tpiba_c
+  SOLVENTS:
+  - 1/cell
+  - g/cm^3
+  - mol/L

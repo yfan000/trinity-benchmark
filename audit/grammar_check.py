@@ -75,8 +75,15 @@ def _fold(s: str) -> str:
 
 
 def check_qe(text: str, g: dict) -> list[str]:
-    """&NAMELIST ... / is self-delimiting; scan the whole answer."""
+    """&NAMELIST ... / is self-delimiting; scan the whole answer.
+
+    Also checks CARD ARGUMENTS, which the first version could not see. The judge caught
+    `K_POINTS (mp)` — a real card taking an option that does not exist — and the checker passed
+    it, because it validated namelist variables only. INPUT_PW.def declares each card's legal
+    arguments as an `enum`, so this is a lookup like the rest.
+    """
     known = {_fold(n): {_fold(v) for v in vs} for n, vs in g["namelists"].items()}
+    cards = {_fold(c): {_fold(v) for v in vs} for c, vs in (g.get("card_options") or {}).items()}
     out, cur = [], None
     for ln in text.splitlines():
         s = ln.split("!")[0].strip()
@@ -86,6 +93,15 @@ def check_qe(text: str, g: dict) -> list[str]:
         if s == "/":
             cur = None
             continue
+        # A card line: NAME followed by an optional argument, bare or parenthesised/braced.
+        if (m := re.match(r"^([A-Z][A-Z_]{3,})\b[ \t]*[({]?\s*([A-Za-z_][\w./^]*)?\s*[)}]?\s*$", s)):
+            name, arg = _fold(m.group(1)), m.group(2)
+            if name in cards:
+                cur = None                       # a card closes any open namelist
+                if arg and _fold(arg) not in cards[name]:
+                    out.append(f"{m.group(1)}: option {arg!r} "
+                               f"(accepts {', '.join(sorted(cards[name]))})")
+                continue
         if cur in known and (m := re.match(r"^([A-Za-z_]\w*)\s*(?:\([^)]*\))?\s*=", s)):
             if _fold(m.group(1)) not in known[cur]:
                 out.append(f"&{cur.upper()}: {m.group(1)}")
@@ -126,7 +142,17 @@ def check_nekrs(text: str, g: dict) -> tuple[list[str], list[str]]:
                 out.append(f"section [{cur}]")
         elif (m := re.match(r"^([A-Za-z_][\w./<>-]*)\s*=", s)):
             f, k = _fold(cur), _fold(m.group(1))
-            if not cur or f in declared:
+            if not cur:
+                # A key before any [SECTION]. This used to `continue`, and it is the single
+                # largest gap the two-judge adjudication exposed: four nekRS decks wrote bare
+                # KEY = value with no sections at all (ELEMENT_ORDER, TIME_STEP, param(1),
+                # lx1, lelg), the judge called every one invented, and the parser reported
+                # clean because it never looked. .par requires [GENERAL], so a key outside any
+                # section is malformed whatever the key is named.
+                if k not in {_fold(x) for x in g["toplevel_keys"]}:
+                    out.append(f"{m.group(1)} outside any section")
+                continue
+            if f in declared:
                 continue
             allowed = set(known.get(f, ()))
             for p, ks in pats:
