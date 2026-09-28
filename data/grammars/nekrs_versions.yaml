@@ -1,0 +1,70 @@
+# nekrs input grammar, one key set PER RELEASE, with a derived removal map.
+#
+# WHY VERSIONED. A grammar taken from the development branch calls correct older syntax
+# invented. nekRS renamed [VELOCITY] to [FLUID VELOCITY] between v23 and master and the
+# catalog installs both, which is how a wrong spelling reached format_contracts.yaml.
+# `removed` is DERIVED by diffing adjacent releases, never asserted by hand -- a key in
+# one release and absent from the next was removed in between, and that is a fact about
+# the two files rather than an opinion about the software.
+
+app: nekrs
+sources:
+  '23.0':
+    ref: v23.0
+    sha256_12: 590064daba51
+  master:
+    ref: master
+    sha256_12: 847bf68d4a61
+installed_versions_in_catalog:
+- '23.0'
+- master
+removed:
+  AMGX:
+    last_seen: '23.0'
+    gone_by: master
+  BOOMERAMG:
+    last_seen: '23.0'
+    gone_by: master
+  SCALAR01:
+    last_seen: '23.0'
+    gone_by: master
+  SCALAR02:
+    last_seen: '23.0'
+    gone_by: master
+  TEMPERATURE:
+    last_seen: '23.0'
+    gone_by: master
+  VELOCITY:
+    last_seen: '23.0'
+    gone_by: master
+versions:
+  '23.0':
+    sections:
+    - AMGX
+    - BOOMERAMG
+    - CVODE
+    - GENERAL
+    - MESH
+    - NEKNEK
+    - OCCA
+    - PROBLEMTYPE
+    - SCALAR
+    - SCALAR01
+    - SCALAR02
+    - TEMPERATURE
+    - VELOCITY
+  master:
+    sections:
+    - CVODE
+    - ELLIPTIC FOO
+    - FLUID PRESSURE
+    - FLUID VELOCITY
+    - FOO BOOMERAMG
+    - GENERAL
+    - GEOM
+    - MESH
+    - NEKNEK
+    - OCCA
+    - PROBLEMTYPE
+    - SCALAR
+    - SCALAR FOO

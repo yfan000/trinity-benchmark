@@ -74,6 +74,38 @@ def _fold(s: str) -> str:
     return s.strip().lower()
 
 
+def _sep(s: str) -> str:
+    """GROMACS and friends treat - and _ as the same character. They do NOT ignore separators:
+    `pme-order` and `pme_order` are one key, `pmeorder` is a different (nonexistent) one."""
+    return _fold(s).replace("-", "_")
+
+
+def classify(app: str, token: str, installed: str | None = None) -> tuple[str, str]:
+    """Was this token REMOVED from the grammar, or was it never in it?
+
+    Derived by diffing adjacent upstream releases, never asserted. A token present in one
+    release and absent from the next was removed in between; that is a fact about two files.
+    Tokens absent from every release we hold are reported as such and NOT called invented —
+    `title` and `nstxtcout` predate the oldest reference fetched, so this method cannot
+    classify them and says so rather than guessing.
+
+    The verdict is unaffected either way: a key removed in 2021 is still an error on a 2024
+    install. This changes the EXPLANATION, which is what a reader needs to act on.
+    """
+    f = GRAM / f"{app}_versions.yaml"
+    if not f.exists():
+        return "unclassified", "no versioned grammar for this application"
+    d = yaml.safe_load(f.read_text())
+    want = _sep(token)
+    for k, v in (d.get("removed") or {}).items():
+        if _sep(k.split(":")[-1]) == want:
+            inst = f" (installed {installed})" if installed else ""
+            return "removed", (f"real in {v['last_seen']}, removed by {v['gone_by']}"
+                               f"{inst} — not a fabrication, but not valid here either")
+    oldest = (d.get("installed_versions_in_catalog") or ["?"])[0]
+    return "absent", f"in no release we hold (oldest fetched: {oldest})"
+
+
 def check_qe(text: str, g: dict) -> list[str]:
     """&NAMELIST ... / is self-delimiting; scan the whole answer.
 
