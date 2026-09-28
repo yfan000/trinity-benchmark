@@ -1084,5 +1084,45 @@
     "note2": "Scope deliberately narrow: only a tolerance. The rule's contradiction-only scoping from the earlier revision is untouched."
    }
   ]
+ },
+ "r31": {
+  "parent": "r30",
+  "created": "2026-09-27",
+  "files": {
+   "_common.yaml": "b0b2bfae",
+   "batch_job_creation/_common.yaml": "5e2045a9",
+   "batch_job_creation/slurm.yaml": "4873ea85",
+   "input_preparation/_common.yaml": "40e10cf5",
+   "input_preparation/gromacs.yaml": "4c40c110",
+   "input_preparation/hpl.yaml": "083d0b37",
+   "input_preparation/qe.yaml": "6683a330",
+   "resource_selection/_common.yaml": "50759943",
+   "software_selection/_common.yaml": "d366ecd4"
+  },
+  "rationale": "Splits INP.common.no_binary_contents, which stated two obligations in one claim: do not fabricate contents for a binary/runtime-generated file, AND list such files as runtime-produced. Not the same offence and not the same severity. Six of the rule's eight v8 firings across all arms were the second clause, so a FATAL verdict was mostly being handed out for an omission. Fabrication stays fatal (a fabricated .tpr cannot run); the omission becomes a new major, INP.common.runtime_files_noted. NOT REPLAYABLE, and more strongly than r30: r30 changed a claim, this ADDS a rule, so the corpus holds no verdict for it at all and audit.matrix refuses to score rather than assume a pass. Numbers require re-judging.",
+  "changes": [
+   {
+    "op": "scope",
+    "id": "INP.common.no_binary_contents",
+    "motivated_by": [
+     "rich/gemma-4-31b/pytorch: fenced block reading '[Binary data produced at runtime]'",
+     "rich/llama-3.1-8b/alphafold: authored a uniprot.fasta placeholder"
+    ],
+    "note": "Both are placeholder blocks rather than invented data, so the claim now says a placeholder counts as contents however short."
+   },
+   {
+    "op": "add",
+    "id": "INP.common.runtime_files_noted",
+    "motivated_by": [
+     "bare/gemma-4-31b/hpl: HPL.out and *.log not listed as runtime outputs",
+     "bare/llama-3.1-8b/gromacs: .tpr neither authored nor listed; no build path given",
+     "bare/nemotron-3-ultra/pytorch: checkpoint referenced in code, never declared",
+     "base/gpt-oss-120b/qmcpack: .h5 not listed as converter-generated",
+     "rich/gpt-oss-120b/qmcpack: same, restated",
+     "rich/nemotron-3-ultra/pytorch: checkpoint path used, not declared as existing"
+    ],
+    "note": "major, not fatal: an unstated converter command is an incomplete answer, not an unrunnable one."
+   }
+  ]
  }
 }

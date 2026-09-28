@@ -29,6 +29,7 @@ from __future__ import annotations
 import argparse
 import collections
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -69,6 +70,18 @@ def _is_pass(r: dict) -> bool:
             and r.get("usability") == 2 and not r.get("fatal_error"))
 
 
+def _ver(rubric_id: str | None) -> int:
+    """Rubric ids sort by their leading integer: r0 < r28 < r29-capability < r31.
+
+    A rule with no `introduced_in` predates the marker and belongs to every version, so it
+    sorts to -1 and is never dropped.
+    """
+    if not rubric_id:
+        return -1
+    m = re.match(r"r(\d+)", str(rubric_id))
+    return int(m.group(1)) if m else -1
+
+
 def replay(row: dict, rubric: str, demote: frozenset[str] = frozenset(),
            view: str = "all") -> tuple[dict, set[str]]:
     """Re-derive one row's scores under `rubric`. Returns (row, rules with no verdict).
@@ -79,6 +92,14 @@ def replay(row: dict, rubric: str, demote: frozenset[str] = frozenset(),
     the YAML said major, which is how the headline drifted from anything the repo could produce.
     """
     skill = load_skill(row["subtask"], row.get("app"), row.get("system"), rubric_id=rubric)
+    # A rule added after `rubric` was published is not part of it. The loader stamps rubric_id
+    # as a label and always reads today's YAML, so without this the first rule added after r28
+    # made `--rubric r28` demand a verdict the r27 grades never gave, and the tool correctly
+    # refused to score the published table at all. `--allow-missing` would have papered over it
+    # by treating the rule as unasked, which is the same answer reached by a route that also
+    # hides real gaps. Rules carry `introduced_in`; anything newer than the target is dropped.
+    skill.requirements = [q for q in skill.requirements
+                          if _ver(q.get("introduced_in")) <= _ver(rubric)]
     if view != "all":
         keep = {k for k, c in rule_classes().items() if c in view.split("+")}
         skill.requirements = [q for q in skill.requirements if q["id"] in keep]

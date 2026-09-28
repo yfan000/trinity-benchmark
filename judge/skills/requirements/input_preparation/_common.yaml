@@ -97,9 +97,46 @@ requirements:
       genuinely fatal case, a `.tpr` authored as text when grompp compiles it, stays fatal
       under no_binary_contents and INP.gromacs.tpr_not_authored.
 
+  - id: INP.common.runtime_files_noted
+    # A rule added AFTER a published rubric must not silently join it. The loader stamps
+    # rubric_id as a label and always reads today's YAML, so without this marker
+    # `audit.matrix --rubric r28` starts asking for a verdict the r27 grades never gave and
+    # refuses to score the published table at all. audit.matrix drops rules introduced later
+    # than the rubric it is replaying.
+    introduced_in: r31
+    claim: "A binary or runtime-generated file the run needs is identified as produced at
+            runtime or by a build tool — a command, or a note saying so. Fires only where such
+            a file is REQUIRED by the task; never on a file the answer had no reason to mention,
+            and never where contents were fabricated, which no_binary_contents already covers."
+    decided_by: judge
+    dimension: completeness
+    severity: major
+    source: "prompt: the DO-NOT-write list names these files and asks for the producing command"
+    rationale: >-
+      Split out of INP.common.no_binary_contents in r31, which stated two obligations in one
+      claim: do not fabricate contents, AND list such files as runtime-produced. They are not
+      the same offence and do not deserve the same severity. A fabricated `.tpr` cannot run —
+      that is fatal. An unstated converter command is an incomplete answer, not an unrunnable
+      one.
+
+      The split also corrects a mis-weighting hiding in the merged rule. Of its eight v8
+      firings across all three arms, SIX were this clause and only two were fabrication:
+
+        bare  / gemma-4-31b      / hpl       HPL.out and *.log not listed as runtime outputs
+        bare  / llama-3.1-8b     / gromacs   .tpr neither authored nor listed; no build path
+        bare  / nemotron-3-ultra / pytorch   checkpoint referenced in code, never declared
+        base  / gpt-oss-120b     / qmcpack   .h5 not listed as converter-generated
+        rich  / gpt-oss-120b     / qmcpack   same, restated
+        rich  / nemotron-3-ultra / pytorch   checkpoint path used, not declared as existing
+
+      So the majority of a FATAL rule's firings were omissions. Under the old wording each of
+      those zeroed the item; here they cap it instead.
+
   - id: INP.common.no_binary_contents
-    claim: "No text contents are invented for a binary or runtime-generated file; those are
-            listed as produced at runtime instead"
+    claim: "No text contents are invented for a binary or runtime-generated file. A placeholder
+            block counts as contents: a fenced block under a binary filename is authoring it,
+            however short the text inside. Whether such a file is correctly identified as
+            runtime-produced is INP.common.runtime_files_noted, not this rule."
     decided_by: deterministic
     # `__rubric.` reads the binary_files list from THIS library, not the catalog — the catalog
     # has no such field. Before r26 the `field:` declaration was ignored and the path hardcoded,
@@ -113,6 +150,23 @@ requirements:
       Measured repeatedly: text written into NWChem `.db` and `.movecs`, and a GROMACS `.tpr`
       authored as text when `grompp` compiles it from `.mdp` + `.gro` + `.top`. A fabricated
       `.tpr` cannot work, so this is fatal rather than major.
+
+      NARROWED in r31 to that offence alone. The claim used to carry a second obligation —
+      "those are listed as produced at runtime instead" — which is now
+      INP.common.runtime_files_noted at `major`. Six of this rule's eight v8 firings were that
+      second clause, so a fatal verdict was mostly being handed out for an omission.
+
+      The two firings that belong here, and that keep it fatal, are both placeholder blocks
+      rather than walls of invented data, which is why the claim now says so explicitly:
+
+        rich / gemma-4-31b  / pytorch     fenced block reading "[Binary data produced at runtime]"
+        rich / llama-3.1-8b / alphafold   authored a uniprot.fasta placeholder
+
+      Note the deterministic check still cannot see either: pytorch and alphafold record no
+      binary files in the rubric OR in format_contracts, so `no_contents_for` returns
+      not_evaluated and the judge decides. Populating those lists would make the check bite,
+      but `binary:` also drives the prompt's DO-NOT-write list, so adding entries changes the
+      prompt and is a separate decision from this split.
 
   # INP.common.declared_counts_match was REMOVED in r26. It declared `decided_by: deterministic`
   # but carried no `declares`/`counts_card`, so `_count_match` returned "check under-specified"
