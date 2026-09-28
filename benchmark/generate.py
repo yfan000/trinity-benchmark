@@ -580,6 +580,24 @@ def format_contract(system: str, app: str) -> str:
                    + ", ".join(c["mandatory"]))
     if c.get("expected"):
         out.append("Usually present, not required: " + ", ".join(c["expected"]))
+    if c.get("valid_sections"):
+        # Stated as CLOSED and as a permission, which are two different jobs and both matter.
+        #
+        # Closed, because the existing contract already names sections and models still invent
+        # new ones — "usually present, not required: [MESH]" reads as an example, not as a
+        # boundary. Only the word ONLY makes it a boundary.
+        #
+        # A permission and not a checklist, because this file's own header records the
+        # opposite failure: content markers supplied as a contract had models writing the
+        # amino-acid alphabet into a FASTA, so "the check would start passing while the decks
+        # got worse". A closed list invites a model to write all thirteen sections whether the
+        # case needs them or not, which would improve no_invented_keywords and degrade the
+        # deck. Hence the second sentence.
+        out.append("Complete set of sections this format defines — there are NO others, and a "
+                   "section not in this list does not exist: "
+                   + ", ".join(c["valid_sections"])
+                   + ". Include ONLY the ones this case actually requires; the list is what is "
+                     "permitted, not what is expected.")
     return "\n".join(out)
 
 

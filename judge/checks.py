@@ -648,7 +648,41 @@ def _dialect_match(req, ctx) -> tuple[str, str]:
     return "satisfied", f"{want} directives, correct for {ctx['system']}"
 
 
+def _grammar_valid(req, ctx) -> tuple[str, str]:
+    """Parse the deck against the grammar the application itself publishes.
+
+    Covers nekRS, Quantum ESPRESSO and GROMACS, whose grammars are vendored under
+    data/grammars/ with their upstream blob shas. QMCPACK has no machine-readable schema — only
+    prose RST — so it is not covered and returns not_evaluated rather than a guess.
+
+    NOT DECISIVE, deliberately. `no_invented_keywords` stays `decided_by: judge`; in skill mode
+    this verdict is stored as a `code_verdict` and shown to nobody. The point is to make the
+    parser's answer comparable with the judge's before anyone promotes it, because the two
+    disagree in both directions: the judge named three invented QE variables where the parser
+    finds thirty, and the parser flags GROMACS keys the judge passed.
+
+    A VIOLATION HERE MEANS "absent from the reference version", NOT "invented". GROMACS answers
+    use `ns_type` and `nstxtcout`, which were valid in older releases; nekRS [VELOCITY] is
+    correct on aurora's v23 and wrong on polaris. The evidence string always names the
+    reference, and the renamed-section case is reported separately and never as a violation.
+    Conflating deprecation with invention is how a wrong spelling got into format_contracts.
+    """
+    try:
+        from audit.grammar_check import validate
+    except Exception:
+        return "not_evaluated", "grammar checker unavailable"
+    r = validate(ctx.get("app", ""), ctx.get("answer", "") or "")
+    if r is None:
+        return "not_evaluated", f"no vendored grammar for {ctx.get('app')!r}"
+    if not r["unknown"]:
+        note = f"; {len(r['version_sensitive'])} version-sensitive" if r["version_sensitive"] else ""
+        return "satisfied", f"every section and key appears in {r['ref']}{note}"
+    return "violated", (f"{len(r['unknown'])} not present in {r['ref']}: "
+                        + ", ".join(r["unknown"][:6]))
+
+
 KINDS = {"no_reservation": _no_reservation, "invokes_app": _invokes_app,
+         "grammar_valid": _grammar_valid,
          "sections_present": _sections_present, "file_identifiable": _file_identifiable,
          "filenames_present": _filenames_present,
          "outputs_not_authored": _outputs_not_authored,

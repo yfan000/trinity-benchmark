@@ -189,6 +189,13 @@ requirements:
     source: "model"
 
   - id: INP.common.no_invented_keywords
+    # r32: a deterministic check is now attached, and deliberately NOT made decisive.
+    # `decided_by` stays `judge`, so in skill mode this runs, is stored as a code_verdict, and
+    # decides nothing. It exists to make the parser's answer comparable with the judge's, and
+    # they already disagree in both directions: on one QE deck the judge named three invented
+    # variables where the parser finds thirty, and the parser flags GROMACS keys the judge
+    # passed. Promote it only after that disagreement is understood.
+    check: {kind: grammar_valid}
     claim: "Uses no keyword that does not EXIST in this application's input language. A
             keyword that exists but does not appear in the supplied worked example is fine —
             the example is one deck, not a dictionary. Do not mark violated for a directive

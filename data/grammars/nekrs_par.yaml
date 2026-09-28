@@ -1,0 +1,80 @@
+# The nekRS .par grammar, transcribed from the application's own reference.
+#
+# PROVENANCE. Nek5000/nekRS@master doc/parHelp.txt, blob sha 7d0629ae4e0b91fad42759f4be2faed35a858b2a,
+# 16,362 bytes, retrieved 2026-09-27 via the GitHub contents API.
+# https://github.com/Nek5000/nekRS/blob/master/doc/parHelp.txt
+#
+# WHY THIS FILE IS DIFFERENT FROM format_contracts.yaml. That file records what an application
+# refuses to run WITHOUT — a minimum, curated, and explicitly "format knowledge, not measured
+# from runs". This is the opposite and stronger claim: the COMPLETE set of what the parser
+# accepts, taken from upstream rather than inferred. It is the only grammar in the repo with
+# that standing, and no second application should be added here from recollection or from an
+# exemplar. An exemplar is one deck, not a dictionary — the mistake this repo has made twice.
+#
+# WHAT IT IS FOR. INP.common.no_invented_keywords is fatal and fires 11 times in the augmented
+# arm; it is judge-decided, so nothing mechanical checks it. Every one of those verdicts is an
+# LLM asserting from pre-training what a parser would settle. This makes the parser's own
+# answer available.
+#
+# VERSION CAVEAT, and it has already bitten once. Section names are version-dependent: nekRS
+# renamed [VELOCITY]/[PRESSURE] to [FLUID VELOCITY]/[FLUID PRESSURE] between v23 and master,
+# and the catalog installs BOTH (aurora records v23; polaris and frontier are recent). This
+# grammar is master. Validating a v23 deck against it would flag correct sections as invalid,
+# which is exactly the failure mode that put a wrong spelling into format_contracts in the
+# first place. Check the installed version before trusting a verdict.
+
+source:
+  repo: Nek5000/nekRS
+  ref: master
+  path: doc/parHelp.txt
+  sha: 7d0629ae4e0b91fad42759f4be2faed35a858b2a
+  retrieved: "2026-09-27"
+
+# "section name and key/value pairs are treated as case insensitive" (parHelp.txt, NOTES)
+case_sensitive: false
+
+# Declared outside any section, at the top of the file.
+toplevel_keys: [userSections]
+
+# Applies to every field section — the document lists these once under "COMMON field settings"
+# and reuses them across [FLUID *], [SCALAR *] and friends.
+common_field_keys:
+  [solver, residualTol, absoluteTol, initialGuess, preconditioner, coarseGridDiscretization,
+   coarseSolver, semfemSolver, pMGSchedule, smootherType, boundaryTypeMap, checkpointing,
+   regularization]
+
+sections:
+  OCCA:            [backend, deviceNumber, platformNumber]
+  GENERAL:
+    [verbose, polynomialOrder, dealiasing, cubaturePolynomialOrder, redirectOutputTo, startFrom,
+     timeStepper, stopAt, numSteps, endTime, elapsedTime, dt, advectionSubCyclingSteps,
+     checkpointEngine, checkpointPrecision, checkpointControl, checkpointInterval, constFlowRate,
+     regularization, udf, oudf, usr, scalars]
+  NEKNEK:          [boundaryEXTOrder, multirateTimeStepping]
+  PROBLEMTYPE:     [equation]
+  MESH:            [partitioner, boundaryIDMap, boundaryIDMapFluid, connectivityTol, file, hRefine]
+  GEOM:            []                       # documented as "..." upstream; keys unenumerated
+  FLUID PRESSURE:  []                       # "..." upstream; COMMON field keys apply
+  FLUID VELOCITY:  [density, rho, viscosity, mu]
+  SCALAR:          [mesh, transportCoeff, transportCoeffSolid, diffusionCoeff, diffusionCoeffSolid]
+  CVODE:
+    [solver, gsType, relativeTol, epsLin, dqSigma, maxSteps, sharedRho, jtvRecycleProperties,
+     dealiasing]
+
+# Sections whose name carries a user-chosen field name. Matched by pattern, not by literal.
+section_patterns:
+  - pattern: '^SCALAR .+$'
+    keys: [mesh, transportCoeff, transportCoeffSolid, diffusionCoeff, diffusionCoeffSolid]
+  - pattern: '^.+ BOOMERAMG$'
+    keys: [coarsenType, interpolationType, smootherType, iterations, strongThreshold,
+           nonGalerkinTol, aggressiveCoarseningLevels, chebyshevRelaxOrder, chebyshevFraction]
+  - pattern: '^ELLIPTIC .+$'
+    keys: [vectorField, poisson]
+
+# Sections that carry the COMMON field keys in addition to their own.
+field_sections: ['FLUID PRESSURE', 'FLUID VELOCITY', 'SCALAR', '^SCALAR .+$', 'MESH']
+
+# `userSections = CASEDATA` legalises [CASEDATA]. A user section is valid ONLY if declared, and
+# its keys are user-defined so they are never checked. The judge already caught a model using
+# [CASEDATA] without the declaration, so this is a real rule, not a hypothetical.
+user_sections_key: userSections

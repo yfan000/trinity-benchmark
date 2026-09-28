@@ -58,6 +58,37 @@ contracts:
     binary: [".re2"]          # the mesh is a compiled binary, produced by the meshing tools
     mandatory: ["[GENERAL]"]
     expected:  ["[MESH]"]
+    # THE COMPLETE SET, transcribed from the upstream reference rather than inferred. This is
+    # the only application in this file with a `valid_sections` list, because it is the only
+    # one whose grammar has been read from source: Nek5000/nekRS@master doc/parHelp.txt, which
+    # enumerates every section the .par parser accepts. Do NOT add a list for another
+    # application from recollection or from its exemplar — an exemplar is one deck, not a
+    # dictionary, and treating it as one is the defect this whole file was written to replace.
+    #
+    # Motivated by measurement: `INP.common.no_invented_keywords` is fatal and fires 11 times
+    # in the augmented arm, 4 of them section-level inventions. nemotron-3-ultra wrote
+    # [STATISTICS], [BOUNDARY], [OUTPUT] and [FLUID] into a nekRS .par; parHelp.txt confirms
+    # none exists. It was not hallucinating capabilities nekRS lacks — the real spellings are
+    # `checkpointControl`/`checkpointInterval` for scheduling, `userSections` for user blocks,
+    # and `boundaryTypeMap` INSIDE a field section for boundary conditions.
+    valid_sections:
+      - "[OCCA]"
+      - "[GENERAL]"
+      - "[NEKNEK]"
+      - "[PROBLEMTYPE]"
+      - "[MESH]"
+      - "[GEOM]"
+      - "[FLUID PRESSURE]"
+      - "[FLUID VELOCITY]"
+      - "[SCALAR]"
+      - "[SCALAR <name>]"
+      - "[<field> BOOMERAMG]"
+      - "[CVODE]"
+      - "[ELLIPTIC <field>]"
+    valid_sections_source: >-
+      Nek5000/nekRS@master doc/parHelp.txt. Boundary conditions use `boundaryTypeMap` within a
+      field section, not a section of their own. Section and key names are case-insensitive;
+      values in quotes are not.
     note: >-
       Only [GENERAL] is unconditional — it carries dt, numSteps and polynomialOrder. [MESH] is
       optional when the mesh comes from the .re2, and was flagged on correct decks.
