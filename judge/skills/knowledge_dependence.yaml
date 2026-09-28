@@ -33,6 +33,40 @@ caveats:
     recorded. Both fire more often without the supplied blocks, so a bad queue costs one violation
     rather than three. Use pass/fail as the endpoint, not violation counts.
 
+# A PENDING RECLASSIFICATION, recorded and deliberately NOT applied.
+#
+# The `rules:` mapping below is unchanged and still describes the v8 corpus, which is what the
+# published table reports. Editing it now would retroactively rewrite a classification whose only
+# value is that it was fixed on 2026-09-23 before any answer existed. So this is a note, not a
+# change, and whoever generates the next corpus applies it deliberately.
+pending_revision:
+  date_recorded: "2026-09-27"
+  applies_from: "the first corpus generated with generate.installed(capability='bool')"
+  rule: SOFT.common.claims_true_to_catalog
+  change: "mixed -> supplied"
+  why: >-
+    The rule was classed `mixed` because it is satisfiable by abstention — a model need not make
+    a facility claim at all. That reasoning is intact, but it is no longer the whole story: as of
+    2026-09-27 `installed()` renders `gpu_support` into the catalog listing, so the field the rule
+    mostly fires on is now IN THE PROMPT. A contradiction of a printed fact is a supplied-knowledge
+    failure, not an arguable one.
+
+    Measured on v8, 43 of the rule's 56 firings were contradictions of `gpu_support` (24) or of the
+    `description` text (19) — both now supplied. The residual is 8 scheduler firings, where the
+    field comes from systems/<system>.yaml and is NOT rendered, plus 5 that fired on catalog
+    silence against the rule's own text. So `supplied` is right for roughly 77% and wrong for the
+    rest; that imprecision is the cost of keeping one rule rather than splitting it by field, and
+    it is accepted knowingly.
+  consequence_if_not_applied: >-
+    The Software-selection split becomes uninterpretable rather than merely thin. Measured on the
+    v9 arms: knowledge 78/78 in both arms, supplied 78/78 in both arms, and the entire effect of
+    rendering the field — 66/78 to 75/78 — falls in `mixed`. A fact printed in the prompt would be
+    reported in the column labelled "arguable either way", which is the exact confusion this file
+    exists to prevent.
+  also: >-
+    Software selection has NO rules classed `supplied` at all, which is why that column scores
+    nothing for the stage. Applying this change gives it one.
+
 rules:
 
   # ---------------------------------------------------------------- software selection
