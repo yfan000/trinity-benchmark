@@ -668,17 +668,38 @@ def _grammar_valid(req, ctx) -> tuple[str, str]:
     Conflating deprecation with invention is how a wrong spelling got into format_contracts.
     """
     try:
-        from audit.grammar_check import validate
+        from audit.grammar_check import validate, classify
     except Exception:
         return "not_evaluated", "grammar checker unavailable"
-    r = validate(ctx.get("app", ""), ctx.get("answer", "") or "")
+    app = ctx.get("app", "")
+    r = validate(app, ctx.get("answer", "") or "")
     if r is None:
-        return "not_evaluated", f"no vendored grammar for {ctx.get('app')!r}"
+        return "not_evaluated", f"no vendored grammar for {app!r}"
     if not r["unknown"]:
         note = f"; {len(r['version_sensitive'])} version-sensitive" if r["version_sensitive"] else ""
         return "satisfied", f"every section and key appears in {r['ref']}{note}"
-    return "violated", (f"{len(r['unknown'])} not present in {r['ref']}: "
-                        + ", ".join(r["unknown"][:6]))
+
+    # Annotate each finding against the release actually installed, not the development branch.
+    # Without this the evidence read "not present in gromacs@main", which is true and useless:
+    # it does not distinguish a fabricated key from a real one removed three releases ago, and
+    # that distinction is the whole reason the two-judge adjudication scored the parser 0.
+    inst = None
+    try:
+        inst = (app_yaml(ctx.get("system", ""), app) or {}).get("version")
+    except Exception:
+        pass
+    parts, nrem = [], 0
+    for u in r["unknown"][:6]:
+        tok = u.split(":")[-1].split()[0].strip("[]")
+        cls, why = classify(app, tok, inst)
+        if cls == "removed":
+            nrem += 1
+            parts.append(f"{u} ({why})")
+        else:
+            parts.append(u)
+    tail = f" — {nrem} of these were removed from a later release, not invented" if nrem else ""
+    return "violated", f"{len(r['unknown'])} not valid in {app} {inst or r['ref']}: " \
+                       + "; ".join(parts) + tail
 
 
 KINDS = {"no_reservation": _no_reservation, "invokes_app": _invokes_app,
